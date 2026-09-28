@@ -1,4 +1,3 @@
-
 const express = require('express');
 const multer = require('multer');
 const path = require('path');
@@ -89,13 +88,11 @@ function requireAdmin(req, res, next) {
 }
 
 // API Login
-// API Login yang sudah diperbaiki
 app.post('/api/login', async (req, res) => {
     try {
         const { employee_id, password } = req.body;
         console.log(`> Mencoba login untuk ID: "${employee_id}"`);
         
-        // Gunakan .maybeSingle() agar hasilnya berupa objek tunggal atau null
         const { data: user, error } = await supabase
             .from('users')
             .select('employee_id, full_name, role, position')
@@ -140,7 +137,6 @@ app.post('/api/employees', authenticateToken, requireAdmin, async (req, res) => 
     try {
         const { employee_id, password, full_name, position } = req.body;
         
-        // Cek apakah ID sudah terdaftar
         const { data: existing, error: lookupError } = await supabase
             .from('users')
             .select('employee_id')
@@ -175,16 +171,11 @@ app.post('/api/employees', authenticateToken, requireAdmin, async (req, res) => 
     }
 });
 
-// API Upload Multiple PDF Slips dengan Pencocokan Otomatis
+// API Upload Multiple PDF Slips dengan Pencocokan Otomatis (Sudah Diperbaiki)
 app.post('/api/upload-slips', authenticateToken, requireAdmin, upload.array('slip_files'), async (req, res) => {
     try {
         const { month, year } = req.body;
         const files = req.files;
-
-        if (req.body.username !== req.user.employee_id) {
-            await Promise.all((files || []).map(file => fs.promises.unlink(file.path).catch(() => {})));
-            return res.status(403).json({ success: false, message: 'Identitas sesi tidak cocok. Silakan login kembali.' });
-        }
 
         if (!files || files.length === 0) {
             return res.status(400).json({ success: false, message: 'Tidak ada file PDF yang diunggah!' });
@@ -263,7 +254,6 @@ app.get('/api/slips', authenticateToken, async (req, res) => {
     }
 });
 
-// --- PASTIKAN BAGIAN INI ADA DI ATAS app.listen ---
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
