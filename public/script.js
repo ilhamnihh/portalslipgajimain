@@ -5,7 +5,6 @@ function authHeaders(headers = {}) {
     return { ...headers, Authorization: `Bearer ${authToken}` };
 }
 
-// Cek sesi saat halaman pertama kali dibuka
 window.onload = () => {
     if (currentUser) {
         initDashboard();
@@ -27,18 +26,18 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
     if (data.success) {
         currentUser = data.user;
         authToken = data.token;
-        localStorage.setItem('currentUser', JSON.stringify(currentUser)); // Simpan sesi
+        localStorage.setItem('currentUser', JSON.stringify(currentUser));
         localStorage.setItem('authToken', authToken);
         initDashboard();
     } else {
-        alert(data.message);
+        alert(data.message || "Gagal masuk, periksa kembali ID dan password.");
     }
 });
 
 function logout() {
     currentUser = null;
     authToken = null;
-    localStorage.removeItem('currentUser'); // Hapus sesi
+    localStorage.removeItem('currentUser');
     localStorage.removeItem('authToken');
     document.getElementById('login-section').classList.remove('hidden');
     document.getElementById('app-section').classList.add('hidden');
@@ -102,7 +101,7 @@ document.getElementById('add-employee-form').addEventListener('submit', async (e
     };
     const res = await fetch('/api/employees', { method: 'POST', headers: authHeaders({ 'Content-Type': 'application/json' }), body: JSON.stringify(payload) });
     const data = await res.json();
-    alert(data.message);
+    alert(data.message || data.error || "Berhasil");
     if(data.success) { document.getElementById('add-employee-form').reset(); loadAdminData(); }
 });
 
@@ -111,15 +110,28 @@ document.getElementById('upload-form').addEventListener('submit', async (e) => {
     const formData = new FormData();
     formData.append('month', document.getElementById('upload-month').value);
     formData.append('year', document.getElementById('upload-year').value);
-    formData.append('username', currentUser.employee_id);
     
     const files = document.getElementById('slip-files-input').files;
-    for (let i = 0; i < files.length; i++) { formData.append('slip_files', files[i]); }
+    for (let i = 0; i < files.length; i++) { 
+        formData.append('slip_files', files[i]); 
+    }
 
-    const res = await fetch('/api/upload-slips', { method: 'POST', headers: authHeaders(), body: formData });
-    const data = await res.json();
-    alert(data.message);
-    if(data.success) { document.getElementById('upload-form').reset(); loadAdminData(); }
+    try {
+        const res = await fetch('/api/upload-slips', { 
+            method: 'POST', 
+            headers: authHeaders(), 
+            body: formData 
+        });
+        const data = await res.json();
+        
+        alert(data.message || data.error || "Proses upload selesai.");
+        if (data.success) { 
+            document.getElementById('upload-form').reset(); 
+            loadAdminData(); 
+        }
+    } catch (err) {
+        alert("Terjadi kesalahan pada server saat mengunggah file.");
+    }
 });
 
 async function loadEmployeeSlips() {
