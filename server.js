@@ -9,7 +9,7 @@ const app = express();
 
 // Konfigurasi Supabase
 const SUPABASE_URL = 'https://vcasurmurhbtlnxrqkdi.supabase.co'; 
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZjYXN1cm11cmhidGxueHJxa2RpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAzMTIxMzYsImV4cCI6MjEwNTg4ODEzNn0.REy2C3gsZqK-7zbmorYDvIVubpfxN9tyW0ojoodshGc'; 
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZjYXN1cm11cmhidGxueHJxa2RpIiwicm9sZSI6InFub24iLCJpYXQiOjE3OTAzMTIxMzYsImV4cCI6MjEwNTg4ODEzNn0.REy2C3gsZqK-7zbmorYDvIVubpfxN9tyW0ojoodshGc'; 
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const UPLOAD_DIR = process.env.UPLOAD_DIR || path.join(__dirname, 'uploads');
@@ -91,7 +91,7 @@ function requireAdmin(req, res, next) {
 app.post('/api/login', async (req, res) => {
     try {
         const { employee_id, password } = req.body;
-        console.log(`> Mencoba login untuk ID: "${employee_id}"`);[cite: 1]
+        console.log(`> Mencoba login untuk ID: "${employee_id}"`);
         
         const { data: user, error } = await supabase
             .from('users')
@@ -101,7 +101,7 @@ app.post('/api/login', async (req, res) => {
             .maybeSingle();
 
         if (error) {
-            console.log("❌ Error dari Supabase:", error.message);[cite: 1]
+            console.log("❌ Error dari Supabase:", error.message);
             return res.status(401).json({ success: false, message: error.message });
         }
 
@@ -109,10 +109,10 @@ app.post('/api/login', async (req, res) => {
             return res.status(401).json({ success: false, message: 'ID Karyawan atau Password salah!' });
         }
 
-        console.log("✅ Login Berhasil untuk:", user.full_name);[cite: 1]
+        console.log("✅ Login Berhasil untuk:", user.full_name);
         res.json({ success: true, user, token: createToken(user) });
     } catch (err) {
-        console.log("❌ Server Error:", err.message);[cite: 1]
+        console.log("❌ Server Error:", err.message);
         res.status(500).json({ success: false, error: err.message });
     }
 });
@@ -181,7 +181,6 @@ app.post('/api/upload-slips', authenticateToken, requireAdmin, upload.array('sli
             return res.status(400).json({ success: false, message: 'Tidak ada file PDF yang diunggah!' });
         }
 
-        // Ambil semua data karyawan dari Supabase
         const { data: users, error: userError } = await supabase
             .from('users')
             .select('*')
@@ -231,7 +230,7 @@ app.post('/api/upload-slips', authenticateToken, requireAdmin, upload.array('sli
             res.status(400).json({ success: false, message: 'Gagal mencocokkan nama file dengan ID Karyawan. Pastikan nama file mengandung ID karyawan.' });
         }
     } catch (err) {
-        console.log("❌ ERROR SAAT UPLOAD SLIP:", err.message); // <-- Dicetak agar terlihat di log Railway
+        console.log("❌ ERROR SAAT UPLOAD SLIP:", err.message);
         await Promise.all((req.files || []).map(file => fs.promises.unlink(file.path).catch(() => {})));
         res.status(500).json({ success: false, error: err.message });
     }
@@ -258,5 +257,5 @@ app.get('/api/slips', authenticateToken, async (req, res) => {
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
-    console.log(`Server berjalan di http://localhost:${PORT}`);[cite: 1]
+    console.log(`Server berjalan di http://localhost:${PORT}`);
 });
