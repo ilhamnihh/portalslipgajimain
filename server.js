@@ -91,7 +91,7 @@ function requireAdmin(req, res, next) {
 app.post('/api/login', async (req, res) => {
     try {
         const { employee_id, password } = req.body;
-        console.log(`> Mencoba login untuk ID: "${employee_id}"`);
+        console.log(`> Mencoba login untuk ID: "${employee_id}"`);[cite: 1]
         
         const { data: user, error } = await supabase
             .from('users')
@@ -101,7 +101,7 @@ app.post('/api/login', async (req, res) => {
             .maybeSingle();
 
         if (error) {
-            console.log("❌ Error dari Supabase:", error.message);
+            console.log("❌ Error dari Supabase:", error.message);[cite: 1]
             return res.status(401).json({ success: false, message: error.message });
         }
 
@@ -109,10 +109,10 @@ app.post('/api/login', async (req, res) => {
             return res.status(401).json({ success: false, message: 'ID Karyawan atau Password salah!' });
         }
 
-        console.log("✅ Login Berhasil untuk:", user.full_name);
+        console.log("✅ Login Berhasil untuk:", user.full_name);[cite: 1]
         res.json({ success: true, user, token: createToken(user) });
     } catch (err) {
-        console.log("❌ Server Error:", err.message);
+        console.log("❌ Server Error:", err.message);[cite: 1]
         res.status(500).json({ success: false, error: err.message });
     }
 });
@@ -171,7 +171,7 @@ app.post('/api/employees', authenticateToken, requireAdmin, async (req, res) => 
     }
 });
 
-// API Upload Multiple PDF Slips dengan Pencocokan Otomatis (Sudah Diperbaiki)
+// API Upload Multiple PDF Slips dengan Pencocokan Otomatis
 app.post('/api/upload-slips', authenticateToken, requireAdmin, upload.array('slip_files'), async (req, res) => {
     try {
         const { month, year } = req.body;
@@ -231,6 +231,7 @@ app.post('/api/upload-slips', authenticateToken, requireAdmin, upload.array('sli
             res.status(400).json({ success: false, message: 'Gagal mencocokkan nama file dengan ID Karyawan. Pastikan nama file mengandung ID karyawan.' });
         }
     } catch (err) {
+        console.log("❌ ERROR SAAT UPLOAD SLIP:", err.message); // <-- Dicetak agar terlihat di log Railway
         await Promise.all((req.files || []).map(file => fs.promises.unlink(file.path).catch(() => {})));
         res.status(500).json({ success: false, error: err.message });
     }
@@ -257,5 +258,5 @@ app.get('/api/slips', authenticateToken, async (req, res) => {
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
-    console.log(`Server berjalan di http://localhost:${PORT}`);
+    console.log(`Server berjalan di http://localhost:${PORT}`);[cite: 1]
 });
