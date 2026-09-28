@@ -7,9 +7,9 @@ const { createClient } = require('@supabase/supabase-js');
 
 const app = express();
 
-// Konfigurasi Supabase
-const SUPABASE_URL = 'https://vcasurmurhbtlnxrqkdi.supabase.co'; 
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZjYXN1cm11cmhidGxueHJxa2RpIiwicm9sZSI6InFub24iLCJpYXQiOjE3OTAzMTIxMzYsImV4cCI6MjEwNTg4ODEzNn0.REy2C3gsZqK-7zbmorYDvIVubpfxN9tyW0ojoodshGc'; 
+// Mengambil konfigurasi dari Environment Variables Railway
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const UPLOAD_DIR = process.env.UPLOAD_DIR || path.join(__dirname, 'uploads');
