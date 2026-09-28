@@ -89,23 +89,26 @@ function requireAdmin(req, res, next) {
 }
 
 // API Login
+// API Login yang sudah diperbaiki
 app.post('/api/login', async (req, res) => {
     try {
         const { employee_id, password } = req.body;
         console.log(`> Mencoba login untuk ID: "${employee_id}"`);
         
+        // Gunakan .maybeSingle() agar hasilnya berupa objek tunggal atau null
         const { data: user, error } = await supabase
             .from('users')
             .select('employee_id, full_name, role, position')
             .eq('employee_id', employee_id)
-            .eq('password', password);
+            .eq('password', password)
+            .maybeSingle();
 
         if (error) {
             console.log("❌ Error dari Supabase:", error.message);
-            // ... lanjutkan sisa kode kamu di bawahnya ...
+            return res.status(401).json({ success: false, message: error.message });
         }
 
-        if (error || !user) {
+        if (!user) {
             return res.status(401).json({ success: false, message: 'ID Karyawan atau Password salah!' });
         }
 
