@@ -76,11 +76,25 @@ function switchTab(tab) {
     }
 }
 
+function toggleSelectAll(source) {
+    const checkboxes = document.querySelectorAll('.emp-checkbox');
+    checkboxes.forEach(cb => cb.checked = source.checked);
+}
+
 async function loadAdminData() {
     const empRes = await fetch('/api/employees', { headers: authHeaders() });
     const employees = await empRes.json();
-    document.getElementById('employee-table-body').innerHTML = employees.map(e => `
-        <tr class="border-b">
+    
+    const selectAllCb = document.getElementById('select-all-checkbox');
+    if (selectAllCb) selectAllCb.checked = false;
+
+    document.getElementById('employee-table-body').innerHTML = employees.length === 0 ? 
+        `<tr><td colspan="5" class="p-4 text-center text-slate-400">Belum ada data karyawan.</td></tr>` : 
+        employees.map(e => `
+        <tr class="border-b hover:bg-slate-50/50">
+            <td class="p-3 text-center">
+                <input type="checkbox" value="${e.employee_id}" class="emp-checkbox rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer">
+            </td>
             <td class="p-3 font-semibold text-blue-600">${e.employee_id}</td>
             <td class="p-3">${e.full_name}</td>
             <td class="p-3 text-slate-500">${e.position}</td>
@@ -152,6 +166,37 @@ async function deleteEmployee(employeeId, fullName) {
         const res = await fetch(`/api/employees/${employeeId}`, {
             method: 'DELETE',
             headers: authHeaders()
+        });
+        const data = await res.json();
+
+        alert(data.message || data.error || "Proses selesai");
+        if (data.success) {
+            loadAdminData();
+        }
+    } catch (err) {
+        alert("Terjadi kesalahan saat menghapus data karyawan.");
+    }
+}
+
+async function deleteSelectedEmployees() {
+    const selectedCheckboxes = document.querySelectorAll('.emp-checkbox:checked');
+    
+    if (selectedCheckboxes.length === 0) {
+        alert("Pilih setidaknya satu karyawan yang ingin dihapus!");
+        return;
+    }
+
+    if (!confirm(`Apakah Anda yakin ingin menghapus ${selectedCheckboxes.length} karyawan yang dipilih?`)) {
+        return;
+    }
+
+    const employeeIds = Array.from(selectedCheckboxes).map(cb => cb.value);
+
+    try {
+        const res = await fetch('/api/employees', {
+            method: 'DELETE',
+            headers: authHeaders({ 'Content-Type': 'application/json' }),
+            body: JSON.stringify({ employee_ids: employeeIds })
         });
         const data = await res.json();
 

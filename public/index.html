@@ -140,12 +140,20 @@
                         </button>
                     </form>
 
-                    <div class="border-t pt-4">
-                        <h4 class="font-semibold text-slate-700 mb-3">Daftar Karyawan</h4>
+                    <div class="border-t pt-4 space-y-3">
+                        <div class="flex justify-between items-center">
+                            <h4 class="font-semibold text-slate-700">Daftar Karyawan</h4>
+                            <button onclick="deleteSelectedEmployees()" class="px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl text-xs font-semibold transition flex items-center">
+                                <i class="fa-solid fa-trash-can mr-1.5"></i> Hapus yang Dipilih
+                            </button>
+                        </div>
                         <table class="w-full text-left text-sm">
                             <thead class="bg-slate-100 text-slate-600 uppercase text-xs">
                                 <tr>
-                                    <th class="p-3 rounded-l-xl">ID</th>
+                                    <th class="p-3 rounded-l-xl w-10 text-center">
+                                        <input type="checkbox" id="select-all-checkbox" onclick="toggleSelectAll(this)" class="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer">
+                                    </th>
+                                    <th class="p-3">ID</th>
                                     <th class="p-3">Nama</th>
                                     <th class="p-3">Jabatan</th>
                                     <th class="p-3 rounded-r-xl">Aksi</th>

@@ -211,6 +211,7 @@ app.put('/api/employees/:employee_id', authenticateToken, requireAdmin, async (r
     }
 });
 
+// API Hapus Karyawan Satuan
 app.delete('/api/employees/:employee_id', authenticateToken, requireAdmin, async (req, res) => {
     try {
         const { employee_id } = req.params;
@@ -223,6 +224,28 @@ app.delete('/api/employees/:employee_id', authenticateToken, requireAdmin, async
         if (error) throw error;
 
         res.json({ success: true, message: 'Karyawan berhasil dihapus dari sistem!' });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// API Hapus Karyawan Massal (Banyak Sekaligus)
+app.delete('/api/employees', authenticateToken, requireAdmin, async (req, res) => {
+    try {
+        const { employee_ids } = req.body;
+
+        if (!employee_ids || !Array.isArray(employee_ids) || employee_ids.length === 0) {
+            return res.status(400).json({ success: false, message: 'Tidak ada karyawan yang dipilih untuk dihapus!' });
+        }
+
+        const { error } = await supabase
+            .from('users')
+            .delete()
+            .in('employee_id', employee_ids);
+
+        if (error) throw error;
+
+        res.json({ success: true, message: `${employee_ids.length} karyawan berhasil dihapus dari sistem!` });
     } catch (err) {
         res.status(500).json({ success: false, error: err.message });
     }
@@ -290,7 +313,6 @@ app.post('/api/employees/import', authenticateToken, requireAdmin, uploadExcel.s
     }
 });
 
-// API Upload Multiple PDF Slips dengan Pencocokan Ketat (Strict Regex Matching)
 app.post('/api/upload-slips', authenticateToken, requireAdmin, upload.array('slip_files'), async (req, res) => {
     try {
         const { month, year } = req.body;
@@ -350,10 +372,9 @@ app.post('/api/upload-slips', authenticateToken, requireAdmin, upload.array('sli
             res.json({ success: true, message: `${successCount} dari ${files.length} file slip gaji berhasil dicocokkan dan diunggah!` });
         } else {
             await Promise.all(files.map(file => fs.promises.unlink(file.path).catch(() => {})));
-            res.status(400).json({ success: false, message: 'Gagal mencocokkan nama file dengan ID Karyawan. Pastikan nama file mengandung ID karyawan secara utuh (contoh: 1234_sahrul.pdf).' });
+            res.status(400).json({ success: false, message: 'Gagal mencocokkan nama file dengan ID Karyawan. Pastikan nama file mengandung ID karyawan secara utuh.' });
         }
     } catch (err) {
-        console.log("❌ ERROR SAAT UPLOAD SLIP:", err.message);
         await Promise.all((req.files || []).map(file => fs.promises.unlink(file.path).catch(() => {})));
         res.status(500).json({ success: false, error: err.message });
     }
