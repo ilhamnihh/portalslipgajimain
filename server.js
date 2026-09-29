@@ -211,7 +211,6 @@ app.put('/api/employees/:employee_id', authenticateToken, requireAdmin, async (r
     }
 });
 
-// API Hapus Karyawan Satuan
 app.delete('/api/employees/:employee_id', authenticateToken, requireAdmin, async (req, res) => {
     try {
         const { employee_id } = req.params;
@@ -229,7 +228,6 @@ app.delete('/api/employees/:employee_id', authenticateToken, requireAdmin, async
     }
 });
 
-// API Hapus Karyawan Massal (Banyak Sekaligus)
 app.delete('/api/employees', authenticateToken, requireAdmin, async (req, res) => {
     try {
         const { employee_ids } = req.body;
@@ -392,6 +390,69 @@ app.get('/api/slips', authenticateToken, async (req, res) => {
 
         if (error) throw error;
         res.json(data);
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+app.delete('/api/slips/:id', authenticateToken, requireAdmin, async (req, res) => {
+    try {
+        const slipId = req.params.id;
+
+        const { data: slip, error: fetchError } = await supabase
+            .from('salary_slips')
+            .select('file_url')
+            .eq('id', slipId)
+            .single();
+
+        if (!fetchError && slip && slip.file_url) {
+            const filePath = path.join(__dirname, slip.file_url);
+            await fs.promises.unlink(filePath).catch(() => {});
+        }
+
+        const { error } = await supabase
+            .from('salary_slips')
+            .delete()
+            .eq('id', slipId);
+
+        if (error) throw error;
+
+        res.json({ success: true, message: 'Slip gaji berhasil dihapus dari sistem!' });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+app.delete('/api/slips', authenticateToken, requireAdmin, async (req, res) => {
+    try {
+        const { slip_ids } = req.body;
+
+        if (!slip_ids || !Array.isArray(slip_ids) || slip_ids.length === 0) {
+            return res.status(400).json({ success: false, message: 'Tidak ada slip gaji yang dipilih untuk dihapus!' });
+        }
+
+        const { data: slips, error: fetchError } = await supabase
+            .from('salary_slips')
+            .select('file_url')
+            .in('id', slip_ids);
+
+        if (!fetchError && slips) {
+            await Promise.all(slips.map(s => {
+                if (s.file_url) {
+                    const filePath = path.join(__dirname, s.file_url);
+                    return fs.promises.unlink(filePath).catch(() => {});
+                }
+            }));
+        }
+
+        const { error } = await supabase
+            .from('salary_slips')
+            .delete()
+            .in('id', slip_ids);
+
+        if (error) throw error;
+
+        res.json({ success: true, message: `${slip_ids.length} slip gaji berhasil dihapus dari sistem!` });
     } catch (err) {
         res.status(500).json({ success: false, error: err.message });
     }

@@ -81,6 +81,11 @@ function toggleSelectAll(source) {
     checkboxes.forEach(cb => cb.checked = source.checked);
 }
 
+function toggleSelectAllSlips(source) {
+    const checkboxes = document.querySelectorAll('.slip-checkbox');
+    checkboxes.forEach(cb => cb.checked = source.checked);
+}
+
 async function loadAdminData() {
     const empRes = await fetch('/api/employees', { headers: authHeaders() });
     const employees = await empRes.json();
@@ -111,9 +116,28 @@ async function loadAdminData() {
 
     const slipRes = await fetch('/api/slips', { headers: authHeaders() });
     const slips = await slipRes.json();
-    document.getElementById('all-slips-table-body').innerHTML = slips.length === 0 ? `<tr><td colspan="4" class="p-4 text-center text-slate-400">Belum ada file.</td></tr>` : 
+    
+    const selectAllSlipsCb = document.getElementById('select-all-slips-checkbox');
+    if (selectAllSlipsCb) selectAllSlipsCb.checked = false;
+
+    document.getElementById('all-slips-table-body').innerHTML = slips.length === 0 ? `<tr><td colspan="5" class="p-4 text-center text-slate-400">Belum ada file slip gaji.</td></tr>` : 
     slips.map(s => `
-        <tr class="border-b"><td class="p-3 font-semibold">${s.employee_id}</td><td class="p-3">${s.month} ${s.year}</td><td class="p-3 text-slate-600">${s.file_name}</td><td class="p-3"><a href="${s.file_url}" target="_blank" class="px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg text-xs font-semibold">Buka PDF</a></td></tr>
+        <tr class="border-b hover:bg-slate-50/50">
+            <td class="p-3 text-center">
+                <input type="checkbox" value="${s.id}" class="slip-checkbox rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer">
+            </td>
+            <td class="p-3 font-semibold">${s.employee_id}</td>
+            <td class="p-3">${s.month} ${s.year}</td>
+            <td class="p-3 text-slate-600">${s.file_name}</td>
+            <td class="p-3 flex space-x-2">
+                <a href="${s.file_url}" target="_blank" class="px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg text-xs font-semibold hover:bg-blue-100 transition">
+                    <i class="fa-solid fa-eye mr-1"></i> Buka
+                </a>
+                <button onclick="deleteSlip('${s.id}', '${s.file_name}')" class="px-3 py-1.5 bg-rose-50 text-rose-600 rounded-lg text-xs font-semibold hover:bg-rose-100 transition">
+                    <i class="fa-solid fa-trash mr-1"></i> Hapus
+                </button>
+            </td>
+        </tr>
     `).join('');
 }
 
@@ -206,6 +230,58 @@ async function deleteSelectedEmployees() {
         }
     } catch (err) {
         alert("Terjadi kesalahan saat menghapus data karyawan.");
+    }
+}
+
+async function deleteSlip(slipId, fileName) {
+    if (!confirm(`Apakah Anda yakin ingin menghapus file slip "${fileName}"?`)) {
+        return;
+    }
+
+    try {
+        const res = await fetch(`/api/slips/${slipId}`, {
+            method: 'DELETE',
+            headers: authHeaders()
+        });
+        const data = await res.json();
+
+        alert(data.message || data.error || "Proses selesai");
+        if (data.success) {
+            loadAdminData();
+        }
+    } catch (err) {
+        alert("Terjadi kesalahan saat menghapus slip gaji.");
+    }
+}
+
+async function deleteSelectedSlips() {
+    const selectedCheckboxes = document.querySelectorAll('.slip-checkbox:checked');
+    
+    if (selectedCheckboxes.length === 0) {
+        alert("Pilih setidaknya satu slip gaji yang ingin dihapus!");
+        return;
+    }
+
+    if (!confirm(`Apakah Anda yakin ingin menghapus ${selectedCheckboxes.length} slip gaji yang dipilih?`)) {
+        return;
+    }
+
+    const slipIds = Array.from(selectedCheckboxes).map(cb => cb.value);
+
+    try {
+        const res = await fetch('/api/slips', {
+            method: 'DELETE',
+            headers: authHeaders({ 'Content-Type': 'application/json' }),
+            body: JSON.stringify({ slip_ids: slipIds })
+        });
+        const data = await res.json();
+
+        alert(data.message || data.error || "Proses selesai");
+        if (data.success) {
+            loadAdminData();
+        }
+    } catch (err) {
+        alert("Terjadi kesalahan saat menghapus slip gaji.");
     }
 }
 
