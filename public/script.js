@@ -84,9 +84,12 @@ async function loadAdminData() {
             <td class="p-3 font-semibold text-blue-600">${e.employee_id}</td>
             <td class="p-3">${e.full_name}</td>
             <td class="p-3 text-slate-500">${e.position}</td>
-            <td class="p-3">
+            <td class="p-3 flex space-x-2">
                 <button onclick="openEditModal('${e.employee_id}', '${e.full_name}', '${e.position}')" class="px-3 py-1.5 bg-amber-50 text-amber-600 rounded-lg text-xs font-semibold hover:bg-amber-100 transition">
                     <i class="fa-solid fa-pen-to-square mr-1"></i> Edit
+                </button>
+                <button onclick="deleteEmployee('${e.employee_id}', '${e.full_name}')" class="px-3 py-1.5 bg-rose-50 text-rose-600 rounded-lg text-xs font-semibold hover:bg-rose-100 transition">
+                    <i class="fa-solid fa-trash mr-1"></i> Hapus
                 </button>
             </td>
         </tr>
@@ -139,6 +142,27 @@ document.getElementById('edit-employee-form').addEventListener('submit', async (
         alert("Terjadi kesalahan saat memperbarui data karyawan.");
     }
 });
+
+async function deleteEmployee(employeeId, fullName) {
+    if (!confirm(`Apakah Anda yakin ingin menghapus karyawan "${fullName}" (${employeeId})?`)) {
+        return;
+    }
+
+    try {
+        const res = await fetch(`/api/employees/${employeeId}`, {
+            method: 'DELETE',
+            headers: authHeaders()
+        });
+        const data = await res.json();
+
+        alert(data.message || data.error || "Proses selesai");
+        if (data.success) {
+            loadAdminData();
+        }
+    } catch (err) {
+        alert("Terjadi kesalahan saat menghapus data karyawan.");
+    }
+}
 
 document.getElementById('import-excel-form').addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -218,7 +242,7 @@ async function loadEmployeeSlips() {
     const slips = await res.json();
     document.getElementById('employee-slips-container').innerHTML = slips.length === 0 ? `
         <div class="col-span-2 p-8 text-center bg-slate-50 rounded-xl border text-slate-400">Belum ada slip gaji untuk Anda.</div>
-    ` : slips.manap ? '' : slips.map(s => `
+    ` : slips.map(s => `
         <div class="p-5 rounded-2xl border bg-slate-50 flex justify-between items-center">
             <div>
                 <h4 class="font-bold text-slate-900 text-base">Periode ${s.month} ${s.year}</h4>

@@ -182,7 +182,6 @@ app.post('/api/employees', authenticateToken, requireAdmin, async (req, res) => 
     }
 });
 
-// API Edit / Update Karyawan
 app.put('/api/employees/:employee_id', authenticateToken, requireAdmin, async (req, res) => {
     try {
         const { employee_id } = req.params;
@@ -207,6 +206,23 @@ app.put('/api/employees/:employee_id', authenticateToken, requireAdmin, async (r
         if (error) throw error;
 
         res.json({ success: true, message: 'Data karyawan berhasil diperbarui!', user: data });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+app.delete('/api/employees/:employee_id', authenticateToken, requireAdmin, async (req, res) => {
+    try {
+        const { employee_id } = req.params;
+
+        const { error } = await supabase
+            .from('users')
+            .delete()
+            .eq('employee_id', employee_id);
+
+        if (error) throw error;
+
+        res.json({ success: true, message: 'Karyawan berhasil dihapus dari sistem!' });
     } catch (err) {
         res.status(500).json({ success: false, error: err.message });
     }
