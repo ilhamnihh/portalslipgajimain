@@ -91,6 +91,37 @@ async function loadAdminData() {
     `).join('');
 }
 
+// Handler Import Excel Karyawan
+document.getElementById('import-excel-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const fileInput = document.getElementById('excel-file-input');
+    
+    if (fileInput.files.length === 0) {
+        alert("Pilih file Excel terlebih dahulu!");
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('employee_file', fileInput.files[0]);
+
+    try {
+        const res = await fetch('/api/employees/import', {
+            method: 'POST',
+            headers: authHeaders(),
+            body: formData
+        });
+        const data = await res.json();
+
+        alert(data.message || data.error || "Proses impor selesai.");
+        if (data.success) {
+            document.getElementById('import-excel-form').reset();
+            loadAdminData();
+        }
+    } catch (err) {
+        alert("Terjadi kesalahan saat mengunggah file Excel.");
+    }
+});
+
 document.getElementById('add-employee-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const payload = {

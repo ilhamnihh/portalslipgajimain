@@ -3,6 +3,7 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
+const XLSX = require('xlsx');
 const { createClient } = require('@supabase/supabase-js');
 
 const app = express();
@@ -38,6 +39,26 @@ const upload = multer({
     fileFilter: (req, file, cb) => {
         if (path.extname(file.originalname).toLowerCase() !== '.pdf') {
             return cb(new Error('Hanya file PDF yang dapat diunggah.'));
+        }
+        cb(null, true);
+    }
+});
+
+// Konfigurasi Multer untuk Excel
+const excelStorage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, UPLOAD_DIR);
+    },
+    filename: (req, file, cb) => {
+        cb(null, 'excel-' + Date.now() + '-' + file.originalname);
+    }
+});
+const uploadExcel = multer({
+    storage: excelStorage,
+    fileFilter: (req, file, cb) => {
+        const ext = path.extname(file.originalname).toLowerCase();
+        if (ext !== '.xlsx' && ext !== '.xls') {
+            return cb(new Error('Hanya file Excel (.xlsx atau .xls) yang diizinkan.'));
         }
         cb(null, true);
     }
@@ -133,7 +154,7 @@ app.get('/api/employees', authenticateToken, requireAdmin, async (req, res) => {
     }
 });
 
-// API Add Employee
+// API Add Employee (Manual)
 app.post('/api/employees', authenticateToken, requireAdmin, async (req, res) => {
     try {
         const { employee_id, password, full_name, position } = req.body;
@@ -168,6 +189,69 @@ app.post('/api/employees', authenticateToken, requireAdmin, async (req, res) => 
 
         res.json({ success: true, message: 'Karyawan berhasil ditambahkan!', user: data });
     } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// API Import Employees via Excel
+app.post('/api/employees/import', authenticateToken, requireAdmin, uploadExcel.single('employee_file'), async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ success: false, message: 'Tidak ada file Excel yang diunggah!' });
+        }
+
+        const workbook = XLSX.readFile(req.file.path);
+        const sheetName = workbook.SheetNames[0];
+        const sheetData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
+
+        await fs.promises.unlink(req.file.path).catch(() => {});
+
+        if (!sheetData || sheetData.length === 0) {
+            return res.status(400).json({ success: false, message: 'File Excel kosong atau format tidak sesuai.' });
+        }
+
+        let importedCount = 0;
+
+        for (const row of sheetData) {
+            const employee_id = String(row.employee_id || row.ID || '').trim();
+            const password = String(row.password || row.Password || '').trim();
+            const full_name = String(row.full_name || row.Nama || '').trim();
+            const position = String(row.position || row.Jabatan || 'Staff').trim();
+
+            if (!employee_id || !password || !full_name) {
+                continue;
+            }
+
+            const { data: existing } = await supabase
+                .from('users')
+                .select('employee_id')
+                .eq('employee_id', employee_id)
+                .maybeSingle();
+
+            if (!existing) {
+                const { error: insertError } = await supabase
+                    .from('users')
+                    .insert([{
+                        employee_id,
+                        password,
+                        full_name,
+                        role: 'employee',
+                        position
+                    }]);
+
+                if (!insertError) {
+                    importedCount++;
+                }
+            }
+        }
+
+        res.json({ 
+            success: true, 
+            message: `Berhasil mengimpor ${importedCount} karyawan baru dari file Excel!` 
+        });
+
+    } catch (err) {
+        if (req.file) await fs.promises.unlink(req.file.path).catch(() => {});
         res.status(500).json({ success: false, error: err.message });
     }
 });
