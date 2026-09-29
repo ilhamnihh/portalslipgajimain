@@ -311,6 +311,7 @@ app.post('/api/employees/import', authenticateToken, requireAdmin, uploadExcel.s
     }
 });
 
+// API Upload Multiple PDF Slips dengan Pencocokan Persis (Exact Match)
 app.post('/api/upload-slips', authenticateToken, requireAdmin, upload.array('slip_files'), async (req, res) => {
     try {
         const { month, year } = req.body;
@@ -331,16 +332,19 @@ app.post('/api/upload-slips', authenticateToken, requireAdmin, upload.array('sli
         let slipsToInsert = [];
 
         files.forEach((file) => {
-            const fileNameClean = file.originalname.toLowerCase();
+            const fileNameClean = file.originalname.toLowerCase().replace(/\.pdf$/, '').trim();
 
             const targetEmp = users.find(u => {
-                const empIdClean = u.employee_id.toLowerCase();
-                const empNameClean = u.full_name.toLowerCase().replace(/\s+/g, '');
+                const empIdClean = u.employee_id.toLowerCase().trim();
+                const empNameClean = u.full_name.toLowerCase().trim();
+                const empNameNoSpace = empNameClean.replace(/\s+/g, '');
+                const fileNameNoSpace = fileNameClean.replace(/\s+/g, '');
 
-                const idRegex = new RegExp(`(^|[^a-z0-9])${empIdClean}([^a-z0-9]|$)`, 'i');
-                const nameRegex = new RegExp(`(^|[^a-z0-9])${empNameClean}([^a-z0-9]|$)`, 'i');
-
-                return idRegex.test(fileNameClean) || nameRegex.test(fileNameClean);
+                return fileNameClean === empIdClean || 
+                       fileNameClean === empNameClean || 
+                       fileNameNoSpace === empNameNoSpace ||
+                       fileNameClean.startsWith(empIdClean + '_') || 
+                       fileNameClean.startsWith(empIdClean + '-');
             });
 
             if (targetEmp) {
@@ -370,9 +374,10 @@ app.post('/api/upload-slips', authenticateToken, requireAdmin, upload.array('sli
             res.json({ success: true, message: `${successCount} dari ${files.length} file slip gaji berhasil dicocokkan dan diunggah!` });
         } else {
             await Promise.all(files.map(file => fs.promises.unlink(file.path).catch(() => {})));
-            res.status(400).json({ success: false, message: 'Gagal mencocokkan nama file dengan ID Karyawan. Pastikan nama file mengandung ID karyawan secara utuh.' });
+            res.status(400).json({ success: false, message: 'Gagal mencocokkan nama file. Pastikan nama file PDF persis sama dengan ID atau Nama Karyawan.' });
         }
     } catch (err) {
+        console.log("❌ ERROR SAAT UPLOAD SLIP:", err.message);
         await Promise.all((req.files || []).map(file => fs.promises.unlink(file.path).catch(() => {})));
         res.status(500).json({ success: false, error: err.message });
     }
