@@ -80,7 +80,16 @@ async function loadAdminData() {
     const empRes = await fetch('/api/employees', { headers: authHeaders() });
     const employees = await empRes.json();
     document.getElementById('employee-table-body').innerHTML = employees.map(e => `
-        <tr class="border-b"><td class="p-3 font-semibold text-blue-600">${e.employee_id}</td><td class="p-3">${e.full_name}</td><td class="p-3 text-slate-500">${e.position}</td></tr>
+        <tr class="border-b">
+            <td class="p-3 font-semibold text-blue-600">${e.employee_id}</td>
+            <td class="p-3">${e.full_name}</td>
+            <td class="p-3 text-slate-500">${e.position}</td>
+            <td class="p-3">
+                <button onclick="openEditModal('${e.employee_id}', '${e.full_name}', '${e.position}')" class="px-3 py-1.5 bg-amber-50 text-amber-600 rounded-lg text-xs font-semibold hover:bg-amber-100 transition">
+                    <i class="fa-solid fa-pen-to-square mr-1"></i> Edit
+                </button>
+            </td>
+        </tr>
     `).join('');
 
     const slipRes = await fetch('/api/slips', { headers: authHeaders() });
@@ -91,7 +100,46 @@ async function loadAdminData() {
     `).join('');
 }
 
-// Handler Import Excel Karyawan
+function openEditModal(id, name, position) {
+    document.getElementById('edit-emp-id-hidden').value = id;
+    document.getElementById('edit-emp-id-display').value = id;
+    document.getElementById('edit-emp-name').value = name;
+    document.getElementById('edit-emp-position').value = position;
+    document.getElementById('edit-emp-pass').value = '';
+    document.getElementById('edit-modal').classList.remove('hidden');
+}
+
+function closeEditModal() {
+    document.getElementById('edit-modal').classList.add('hidden');
+}
+
+document.getElementById('edit-employee-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const employee_id = document.getElementById('edit-emp-id-hidden').value;
+    const payload = {
+        full_name: document.getElementById('edit-emp-name').value,
+        position: document.getElementById('edit-emp-position').value,
+        password: document.getElementById('edit-emp-pass').value
+    };
+
+    try {
+        const res = await fetch(`/api/employees/${employee_id}`, {
+            method: 'PUT',
+            headers: authHeaders({ 'Content-Type': 'application/json' }),
+            body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        
+        alert(data.message || data.error || "Berhasil memperbarui data");
+        if (data.success) {
+            closeEditModal();
+            loadAdminData();
+        }
+    } catch (err) {
+        alert("Terjadi kesalahan saat memperbarui data karyawan.");
+    }
+});
+
 document.getElementById('import-excel-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const fileInput = document.getElementById('excel-file-input');
@@ -170,7 +218,7 @@ async function loadEmployeeSlips() {
     const slips = await res.json();
     document.getElementById('employee-slips-container').innerHTML = slips.length === 0 ? `
         <div class="col-span-2 p-8 text-center bg-slate-50 rounded-xl border text-slate-400">Belum ada slip gaji untuk Anda.</div>
-    ` : slips.map(s => `
+    ` : slips.manap ? '' : slips.map(s => `
         <div class="p-5 rounded-2xl border bg-slate-50 flex justify-between items-center">
             <div>
                 <h4 class="font-bold text-slate-900 text-base">Periode ${s.month} ${s.year}</h4>

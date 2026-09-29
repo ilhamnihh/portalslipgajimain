@@ -99,13 +99,13 @@
                     </form>
                 </div>
 
-                <!-- Tab Kelola Karyawan (Dengan Import Excel & Tambah Manual) -->
+                <!-- Tab Kelola Karyawan -->
                 <div id="content-employees" class="hidden bg-white p-6 rounded-2xl shadow-sm border space-y-6">
                     
-                    <!-- Area Drop / Import Excel Karyawan -->
+                    <!-- Area Import Excel Karyawan -->
                     <div class="p-5 bg-slate-50 rounded-2xl border border-dashed border-slate-300 space-y-3">
                         <h3 class="text-base font-bold text-slate-900"><i class="fa-solid fa-file-excel text-emerald-600 mr-2"></i> Import Data Karyawan dari Excel</h3>
-                        <p class="text-xs text-slate-500">Format kolom header Excel yang dibutuhkan: <b class="text-slate-700">employee_id</b>, <b class="text-slate-700">password</b>, <b class="text-slate-700">full_name</b>, <b class="text-slate-700">position</b>.</p>
+                        <p class="text-xs text-slate-500">Format kolom header Excel: <b class="text-slate-700">employee_id</b>, <b class="text-slate-700">password</b>, <b class="text-slate-700">full_name</b>, <b class="text-slate-700">position</b>.</p>
                         
                         <form id="import-excel-form" class="flex flex-col md:flex-row gap-3 items-center">
                             <input type="file" id="excel-file-input" accept=".xlsx, .xls" required class="w-full p-2 border rounded-xl bg-white text-sm">
@@ -147,7 +147,8 @@
                                 <tr>
                                     <th class="p-3 rounded-l-xl">ID</th>
                                     <th class="p-3">Nama</th>
-                                    <th class="p-3 rounded-r-xl">Jabatan</th>
+                                    <th class="p-3">Jabatan</th>
+                                    <th class="p-3 rounded-r-xl">Aksi</th>
                                 </tr>
                             </thead>
                             <tbody id="employee-table-body"></tbody>
@@ -186,6 +187,39 @@
             </div>
 
         </main>
+    </div>
+
+    <!-- MODAL EDIT KARYAWAN -->
+    <div id="edit-modal" class="hidden fixed inset-0 bg-slate-900/50 flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl space-y-4">
+            <div class="flex justify-between items-center border-b pb-3">
+                <h3 class="font-bold text-lg text-slate-900">Edit Data Karyawan</h3>
+                <button onclick="closeEditModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <form id="edit-employee-form" class="space-y-3">
+                <input type="hidden" id="edit-emp-id-hidden">
+                <div>
+                    <label class="block text-xs font-semibold uppercase mb-1">ID Karyawan</label>
+                    <input type="text" id="edit-emp-id-display" disabled class="w-full px-3 py-2 border rounded-xl bg-slate-100 text-slate-500 cursor-not-allowed">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase mb-1">Nama Lengkap</label>
+                    <input type="text" id="edit-emp-name" required class="w-full px-3 py-2 border rounded-xl">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase mb-1">Password Baru <span class="text-slate-400 font-normal">(Kosongkan jika tidak diubah)</span></label>
+                    <input type="text" id="edit-emp-pass" placeholder="Biarkan kosong jika tetap" class="w-full px-3 py-2 border rounded-xl">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase mb-1">Jabatan</label>
+                    <input type="text" id="edit-emp-position" required class="w-full px-3 py-2 border rounded-xl">
+                </div>
+                <div class="flex space-x-2 pt-2">
+                    <button type="button" onclick="closeEditModal()" class="w-1/2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-2.5 rounded-xl transition">Batal</button>
+                    <button type="submit" class="w-1/2 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 rounded-xl transition">Simpan</button>
+                </div>
+            </form>
+        </div>
     </div>
 
     <script src="script.js"></script>

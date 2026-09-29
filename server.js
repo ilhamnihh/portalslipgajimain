@@ -8,8 +8,6 @@ const { createClient } = require('@supabase/supabase-js');
 
 const app = express();
 
-// Mengambil konfigurasi dari Environment Variables Railway
-// Konfigurasi Supabase Langsung
 const SUPABASE_URL = 'https://vcasurmurhbtlnxrqkdi.supabase.co'; 
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZjYXN1cm11cmhidGxueHJxa2RpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAzMTIxMzYsImV4cCI6MjEwNTg4ODEzNn0.REy2C3gsZqK-7zbmorYDvIVubpfxN9tyW0ojoodshGc'; 
 
@@ -44,7 +42,6 @@ const upload = multer({
     }
 });
 
-// Konfigurasi Multer untuk Excel
 const excelStorage = multer.diskStorage({
     destination: (req, file, cb) => {
         cb(null, UPLOAD_DIR);
@@ -109,12 +106,9 @@ function requireAdmin(req, res, next) {
     next();
 }
 
-// API Login
 app.post('/api/login', async (req, res) => {
     try {
         const { employee_id, password } = req.body;
-        console.log(`> Mencoba login untuk ID: "${employee_id}"`);
-        
         const { data: user, error } = await supabase
             .from('users')
             .select('employee_id, full_name, role, position')
@@ -123,7 +117,6 @@ app.post('/api/login', async (req, res) => {
             .maybeSingle();
 
         if (error) {
-            console.log("❌ Error dari Supabase:", error.message);
             return res.status(401).json({ success: false, message: error.message });
         }
 
@@ -131,15 +124,12 @@ app.post('/api/login', async (req, res) => {
             return res.status(401).json({ success: false, message: 'ID Karyawan atau Password salah!' });
         }
 
-        console.log("✅ Login Berhasil untuk:", user.full_name);
         res.json({ success: true, user, token: createToken(user) });
     } catch (err) {
-        console.log("❌ Server Error:", err.message);
         res.status(500).json({ success: false, error: err.message });
     }
 });
 
-// API Get Employees
 app.get('/api/employees', authenticateToken, requireAdmin, async (req, res) => {
     try {
         const { data, error } = await supabase
@@ -154,7 +144,6 @@ app.get('/api/employees', authenticateToken, requireAdmin, async (req, res) => {
     }
 });
 
-// API Add Employee (Manual)
 app.post('/api/employees', authenticateToken, requireAdmin, async (req, res) => {
     try {
         const { employee_id, password, full_name, position } = req.body;
@@ -193,7 +182,36 @@ app.post('/api/employees', authenticateToken, requireAdmin, async (req, res) => 
     }
 });
 
-// API Import Employees via Excel
+// API Edit / Update Karyawan
+app.put('/api/employees/:employee_id', authenticateToken, requireAdmin, async (req, res) => {
+    try {
+        const { employee_id } = req.params;
+        const { full_name, position, password } = req.body;
+
+        const updateData = {
+            full_name,
+            position: position || 'Staff'
+        };
+
+        if (password && password.trim() !== '') {
+            updateData.password = password;
+        }
+
+        const { data, error } = await supabase
+            .from('users')
+            .update(updateData)
+            .eq('employee_id', employee_id)
+            .select()
+            .single();
+
+        if (error) throw error;
+
+        res.json({ success: true, message: 'Data karyawan berhasil diperbarui!', user: data });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
 app.post('/api/employees/import', authenticateToken, requireAdmin, uploadExcel.single('employee_file'), async (req, res) => {
     try {
         if (!req.file) {
@@ -256,7 +274,6 @@ app.post('/api/employees/import', authenticateToken, requireAdmin, uploadExcel.s
     }
 });
 
-// API Upload Multiple PDF Slips dengan Pencocokan Otomatis
 app.post('/api/upload-slips', authenticateToken, requireAdmin, upload.array('slip_files'), async (req, res) => {
     try {
         const { month, year } = req.body;
@@ -315,13 +332,11 @@ app.post('/api/upload-slips', authenticateToken, requireAdmin, upload.array('sli
             res.status(400).json({ success: false, message: 'Gagal mencocokkan nama file dengan ID Karyawan. Pastikan nama file mengandung ID karyawan.' });
         }
     } catch (err) {
-        console.log("❌ ERROR SAAT UPLOAD SLIP:", err.message);
         await Promise.all((req.files || []).map(file => fs.promises.unlink(file.path).catch(() => {})));
         res.status(500).json({ success: false, error: err.message });
     }
 });
 
-// API Get Slips
 app.get('/api/slips', authenticateToken, async (req, res) => {
     try {
         let query = supabase.from('salary_slips').select('*');
@@ -340,7 +355,6 @@ app.get('/api/slips', authenticateToken, async (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-
 app.listen(PORT, () => {
     console.log(`Server berjalan di http://localhost:${PORT}`);
 });
