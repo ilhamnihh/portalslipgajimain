@@ -287,7 +287,7 @@ async function deleteSelectedSlips() {
 
 document.getElementById('import-excel-form').addEventListener('submit', async (e) => {
     e.preventDefault();
-    fileInput = document.getElementById('excel-file-input');
+    const fileInput = document.getElementById('excel-file-input');
     
     if (fileInput.files.length === 0) {
         alert("Pilih file Excel terlebih dahulu!");
@@ -333,7 +333,7 @@ document.getElementById('upload-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const formData = new FormData();
     formData.append('month', document.getElementById('upload-month').value);
-    formData.append('period', document.getElementById('upload-period').value); // <-- Mengirim pilihan Tahap 1 / Tahap 2
+    formData.append('period', document.getElementById('upload-period').value);
     formData.append('year', document.getElementById('upload-year').value);
     
     const files = document.getElementById('slip-files-input').files;
@@ -376,6 +376,3 @@ async function loadEmployeeSlips() {
         </div>
     `).join('');
 }
-```[cite: 3]
-
-Ketiga file sudah lengkap dipisah. Silakan dicoba *restart* server Node.js-nya, sekarang Anda sudah bisa *upload* dua kali dalam sebulan (memilih Tahap 1 atau Tahap 2) tanpa takut slip gaji lamanya tertimpa[cite: 1, 2, 3]!
