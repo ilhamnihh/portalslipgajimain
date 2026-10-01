@@ -148,11 +148,14 @@
                     </form>
 
                     <div class="border-t pt-4 space-y-3">
-                        <div class="flex justify-between items-center">
+                        <div class="flex flex-col md:flex-row justify-between items-center gap-3">
                             <h4 class="font-semibold text-slate-700">Daftar Karyawan</h4>
-                            <button onclick="deleteSelectedEmployees()" class="px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl text-xs font-semibold transition flex items-center">
-                                <i class="fa-solid fa-trash-can mr-1.5"></i> Hapus yang Dipilih
-                            </button>
+                            <div class="flex items-center space-x-2 w-full md:w-auto">
+                                <input type="text" id="search-employee-input" oninput="searchEmployees(this.value)" placeholder="Cari nama atau ID..." class="px-3 py-2 border rounded-xl text-xs focus:ring-2 focus:ring-blue-600 focus:outline-none w-full md:w-64">
+                                <button onclick="deleteSelectedEmployees()" class="px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl text-xs font-semibold transition flex items-center whitespace-nowrap">
+                                    <i class="fa-solid fa-trash-can mr-1.5"></i> Hapus Dipilih
+                                </button>
+                            </div>
                         </div>
                         <table class="w-full text-left text-sm">
                             <thead class="bg-slate-100 text-slate-600 uppercase text-xs">
@@ -194,6 +197,22 @@
                         <tbody id="all-slips-table-body"></tbody>
                     </table>
                 </div>
+
+                <!-- Kotak Masuk Komplain Gaji (Admin) -->
+                <div class="bg-white p-6 rounded-2xl shadow-sm border space-y-4">
+                    <h3 class="text-lg font-bold text-slate-900"><i class="fa-solid fa-comments text-amber-500 mr-2"></i> Kotak Masuk Komplain / Kekurangan Gaji</h3>
+                    <table class="w-full text-left text-sm">
+                        <thead class="bg-slate-100 text-slate-600 uppercase text-xs">
+                            <tr>
+                                <th class="p-3 rounded-l-xl">ID / Nama Karyawan</th>
+                                <th class="p-3">Pesan Komplain</th>
+                                <th class="p-3">Waktu</th>
+                                <th class="p-3 rounded-r-xl">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="admin-complaints-table-body"></tbody>
+                    </table>
+                </div>
             </div>
 
             <!-- EMPLOYEE VIEW -->
@@ -206,6 +225,19 @@
                 <div class="bg-white p-6 rounded-2xl shadow-sm border space-y-4">
                     <h3 class="text-lg font-bold text-slate-900">Slip Gaji Saya</h3>
                     <div id="employee-slips-container" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+                </div>
+
+                <!-- Form Komplain Kekurangan Gaji (Employee) -->
+                <div class="bg-white p-6 rounded-2xl shadow-sm border space-y-4">
+                    <h3 class="text-lg font-bold text-slate-900"><i class="fa-solid fa-triangle-exclamation text-amber-500 mr-2"></i> Laporkan Kekurangan / Kendala Gaji</h3>
+                    <p class="text-xs text-slate-500">Jika ada rincian gaji yang kurang atau tidak sesuai, kirim pesan ke admin melalui form di bawah ini.</p>
+                    
+                    <form id="complaint-form" class="space-y-3">
+                        <textarea id="complaint-message" rows="3" required placeholder="Tuliskan kendala atau kekurangan gaji Anda di sini..." class="w-full p-3 border rounded-xl text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none"></textarea>
+                        <button type="submit" class="bg-amber-600 hover:bg-amber-700 text-white font-semibold py-2.5 px-5 rounded-xl text-xs transition shadow-md">
+                            <i class="fa-solid fa-paper-plane mr-1"></i> Kirim Komplain ke Admin
+                        </button>
+                    </form>
                 </div>
             </div>
 
@@ -248,8 +280,3 @@
     <script src="script.js"></script>
 </body>
 </html>
-```[cite: 2]
-
----
-
-Beri tahu lagi ya kalau file `index.html` ini sudah selesai disalin, nanti saya kirim file terakhir (`script.js`).

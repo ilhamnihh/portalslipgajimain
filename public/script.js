@@ -54,6 +54,7 @@ function initDashboard() {
         document.getElementById('admin-dashboard').classList.remove('hidden');
         document.getElementById('employee-dashboard').classList.add('hidden');
         loadAdminData();
+        loadAdminComplaints();
     } else {
         document.getElementById('admin-dashboard').classList.add('hidden');
         document.getElementById('employee-dashboard').classList.remove('hidden');
@@ -90,29 +91,7 @@ async function loadAdminData() {
     const empRes = await fetch('/api/employees', { headers: authHeaders() });
     const employees = await empRes.json();
     
-    const selectAllCb = document.getElementById('select-all-checkbox');
-    if (selectAllCb) selectAllCb.checked = false;
-
-    document.getElementById('employee-table-body').innerHTML = employees.length === 0 ? 
-        `<tr><td colspan="5" class="p-4 text-center text-slate-400">Belum ada data karyawan.</td></tr>` : 
-        employees.map(e => `
-        <tr class="border-b hover:bg-slate-50/50">
-            <td class="p-3 text-center">
-                <input type="checkbox" value="${e.employee_id}" class="emp-checkbox rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer">
-            </td>
-            <td class="p-3 font-semibold text-blue-600">${e.employee_id}</td>
-            <td class="p-3">${e.full_name}</td>
-            <td class="p-3 text-slate-500">${e.position}</td>
-            <td class="p-3 flex space-x-2">
-                <button onclick="openEditModal('${e.employee_id}', '${e.full_name}', '${e.position}')" class="px-3 py-1.5 bg-amber-50 text-amber-600 rounded-lg text-xs font-semibold hover:bg-amber-100 transition">
-                    <i class="fa-solid fa-pen-to-square mr-1"></i> Edit
-                </button>
-                <button onclick="deleteEmployee('${e.employee_id}', '${e.full_name}')" class="px-3 py-1.5 bg-rose-50 text-rose-600 rounded-lg text-xs font-semibold hover:bg-rose-100 transition">
-                    <i class="fa-solid fa-trash mr-1"></i> Hapus
-                </button>
-            </td>
-        </tr>
-    `).join('');
+    renderEmployeeTable(employees);
 
     const slipRes = await fetch('/api/slips', { headers: authHeaders() });
     const slips = await slipRes.json();
@@ -139,6 +118,95 @@ async function loadAdminData() {
             </td>
         </tr>
     `).join('');
+}
+
+// Fungsi Pencarian Karyawan Real-time
+async function searchEmployees(keyword) {
+    const res = await fetch(`/api/employees/search?q=${encodeURIComponent(keyword)}`, { headers: authHeaders() });
+    const employees = await res.json();
+    renderEmployeeTable(employees);
+}
+
+function renderEmployeeTable(employees) {
+    const selectAllCb = document.getElementById('select-all-checkbox');
+    if (selectAllCb) selectAllCb.checked = false;
+
+    document.getElementById('employee-table-body').innerHTML = employees.length === 0 ? 
+        `<tr><td colspan="5" class="p-4 text-center text-slate-400">Karyawan tidak ditemukan.</td></tr>` : 
+        employees.map(e => `
+        <tr class="border-b hover:bg-slate-50/50">
+            <td class="p-3 text-center">
+                <input type="checkbox" value="${e.employee_id}" class="emp-checkbox rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer">
+            </td>
+            <td class="p-3 font-semibold text-blue-600">${e.employee_id}</td>
+            <td class="p-3">${e.full_name}</td>
+            <td class="p-3 text-slate-500">${e.position}</td>
+            <td class="p-3 flex space-x-2">
+                <button onclick="openEditModal('${e.employee_id}', '${e.full_name}', '${e.position}')" class="px-3 py-1.5 bg-amber-50 text-amber-600 rounded-lg text-xs font-semibold hover:bg-amber-100 transition">
+                    <i class="fa-solid fa-pen-to-square mr-1"></i> Edit
+                </button>
+                <button onclick="deleteEmployee('${e.employee_id}', '${e.full_name}')" class="px-3 py-1.5 bg-rose-50 text-rose-600 rounded-lg text-xs font-semibold hover:bg-rose-100 transition">
+                    <i class="fa-solid fa-trash mr-1"></i> Hapus
+                </button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+// Fitur Komplain Karyawan & Admin
+async function loadAdminComplaints() {
+    const res = await fetch('/api/complaints', { headers: authHeaders() });
+    const complaints = await res.json();
+
+    const tbody = document.getElementById('admin-complaints-table-body');
+    if (!tbody) return;
+
+    tbody.innerHTML = complaints.length === 0 ? 
+        `<tr><td colspan="4" class="p-4 text-center text-slate-400">Belum ada komplain dari karyawan.</td></tr>` : 
+        complaints.map(c => `
+        <tr class="border-b hover:bg-slate-50/50">
+            <td class="p-3"><b>${c.employee_id}</b><br><span class="text-xs text-slate-500">${c.employee_name}</span></td>
+            <td class="p-3 text-slate-700 whitespace-pre-wrap">${c.message}</td>
+            <td class="p-3 text-xs text-slate-400">${new Date(c.created_at).toLocaleString('id-ID')}</td>
+            <td class="p-3">
+                <button onclick="deleteComplaint(${c.id})" class="px-3 py-1.5 bg-emerald-50 text-emerald-600 rounded-lg text-xs font-semibold hover:bg-emerald-100 transition">
+                    <i class="fa-solid fa-check mr-1"></i> Selesaikan
+                </button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+async function deleteComplaint(id) {
+    if (!confirm("Tandai komplain ini sebagai selesai?")) return;
+    const res = await fetch(`/api/complaints/${id}`, { method: 'DELETE', headers: authHeaders() });
+    const data = await res.json();
+    alert(data.message);
+    if (data.success) loadAdminComplaints();
+}
+
+const complaintForm = document.getElementById('complaint-form');
+if (complaintForm) {
+    complaintForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const message = document.getElementById('complaint-message').value;
+
+        try {
+            const res = await fetch('/api/complaints', {
+                method: 'POST',
+                headers: authHeaders({ 'Content-Type': 'application/json' }),
+                body: JSON.stringify({ message })
+            });
+            const data = await res.json();
+
+            alert(data.message);
+            if (data.success) {
+                complaintForm.reset();
+            }
+        } catch (err) {
+            alert("Gagal mengirim komplain.");
+        }
+    });
 }
 
 function openEditModal(id, name, position) {

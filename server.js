@@ -144,6 +144,23 @@ app.get('/api/employees', authenticateToken, requireAdmin, async (req, res) => {
     }
 });
 
+// API Search Karyawan
+app.get('/api/employees/search', authenticateToken, requireAdmin, async (req, res) => {
+    try {
+        const keyword = req.query.q || '';
+        const { data, error } = await supabase
+            .from('users')
+            .select('*')
+            .eq('role', 'employee')
+            .or(`full_name.ilike.%${keyword}%,employee_id.ilike.%${keyword}%`);
+
+        if (error) throw error;
+        res.json(data);
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
 app.post('/api/employees', authenticateToken, requireAdmin, async (req, res) => {
     try {
         const { employee_id, password, full_name, position } = req.body;
@@ -459,6 +476,57 @@ app.delete('/api/slips', authenticateToken, requireAdmin, async (req, res) => {
         if (error) throw error;
 
         res.json({ success: true, message: `${slip_ids.length} slip gaji berhasil dihapus dari sistem!` });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// --- API KOMPLAIN GAJI ---
+app.post('/api/complaints', authenticateToken, async (req, res) => {
+    try {
+        const { message } = req.body;
+        if (!message || message.trim() === '') {
+            return res.status(400).json({ success: false, message: 'Pesan komplain tidak boleh kosong!' });
+        }
+
+        const { error } = await supabase
+            .from('salary_complaints')
+            .insert([{
+                employee_id: req.user.employee_id,
+                employee_name: req.user.full_name,
+                message: message.trim()
+            }]);
+
+        if (error) throw error;
+        res.json({ success: true, message: 'Komplain berhasil dikirim ke Admin!' });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+app.get('/api/complaints', authenticateToken, requireAdmin, async (req, res) => {
+    try {
+        const { data, error } = await supabase
+            .from('salary_complaints')
+            .select('*')
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        res.json(data);
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+app.delete('/api/complaints/:id', authenticateToken, requireAdmin, async (req, res) => {
+    try {
+        const { error } = await supabase
+            .from('salary_complaints')
+            .delete()
+            .eq('id', req.params.id);
+
+        if (error) throw error;
+        res.json({ success: true, message: 'Komplain berhasil diselesaikan/dihapus.' });
     } catch (err) {
         res.status(500).json({ success: false, error: err.message });
     }
