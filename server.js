@@ -22,17 +22,9 @@ app.use('/uploads', express.static(UPLOAD_DIR));
 
 fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, UPLOAD_DIR);
-    },
-    filename: (req, file, cb) => {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        cb(null, uniqueSuffix + '-' + file.originalname);
-    }
-});
+// Gunakan memoryStorage agar file ditangkap dulu di RAM sebelum dikirim ke Supabase Storage
 const upload = multer({
-    storage,
+    storage: multer.memoryStorage(),
     limits: { fileSize: 20 * 1024 * 1024 },
     fileFilter: (req, file, cb) => {
         if (path.extname(file.originalname).toLowerCase() !== '.pdf') {
@@ -328,6 +320,7 @@ app.post('/api/employees/import', authenticateToken, requireAdmin, uploadExcel.s
     }
 });
 
+// --- API UPLOAD SLIP KE SUPABASE STORAGE (BUCKET) ---
 app.post('/api/upload-slips', authenticateToken, requireAdmin, upload.array('slip_files'), async (req, res) => {
     try {
         const { month, period, year } = req.body;
@@ -346,10 +339,9 @@ app.post('/api/upload-slips', authenticateToken, requireAdmin, upload.array('sli
 
         let successCount = 0;
         let slipsToInsert = [];
-
         const formattedMonth = `${month || 'Januari'} (${period || 'Tahap 1'})`;
 
-        files.forEach((file) => {
+        for (const file of files) {
             const fileNameClean = file.originalname.toLowerCase().replace(/\.pdf$/, '').trim();
 
             const targetEmp = users.find(u => {
@@ -366,16 +358,37 @@ app.post('/api/upload-slips', authenticateToken, requireAdmin, upload.array('sli
             });
 
             if (targetEmp) {
+                // Buat nama file unik untuk disimpan di Supabase Storage
+                const uniqueFileName = `${Date.now()}-${Math.round(Math.random() * 1E9)}_${file.originalname.replace(/\s+/g, '_')}`;
+                
+                // Upload buffer ke Supabase Bucket 'salary-slips'
+                const { data: uploadData, error: uploadError } = await supabase.storage
+                    .from('salary-slips')
+                    .upload(uniqueFileName, file.buffer, {
+                        contentType: 'application/pdf',
+                        upsert: false
+                    });
+
+                if (uploadError) {
+                    console.log("❌ Gagal upload ke Supabase Storage:", uploadError.message);
+                    continue;
+                }
+
+                // Dapatkan Public URL dari file yang di-upload
+                const { data: publicUrlData } = supabase.storage
+                    .from('salary-slips')
+                    .getPublicUrl(uniqueFileName);
+
                 slipsToInsert.push({
                     employee_id: targetEmp.employee_id,
                     month: formattedMonth,
                     year: year ? parseInt(year) : 2026,
-                    file_url: `/uploads/${path.basename(file.filename)}`,
+                    file_url: publicUrlData.publicUrl, // URL publik Supabase
                     file_name: file.originalname
                 });
                 successCount++;
             }
-        });
+        }
 
         if (slipsToInsert.length > 0) {
             const { error: insertError } = await supabase
@@ -384,19 +397,12 @@ app.post('/api/upload-slips', authenticateToken, requireAdmin, upload.array('sli
 
             if (insertError) throw insertError;
 
-            const matchedNames = new Set(slipsToInsert.map(slip => path.basename(slip.file_url)));
-            await Promise.all(files
-                .filter(file => !matchedNames.has(file.filename))
-                .map(file => fs.promises.unlink(file.path).catch(() => {})));
-
-            res.json({ success: true, message: `${successCount} dari ${files.length} file slip gaji (${formattedMonth}) berhasil dicocokkan dan diunggah!` });
+            res.json({ success: true, message: `${successCount} dari ${files.length} file slip gaji (${formattedMonth}) berhasil diunggah ke Supabase!` });
         } else {
-            await Promise.all(files.map(file => fs.promises.unlink(file.path).catch(() => {})));
             res.status(400).json({ success: false, message: 'Gagal mencocokkan nama file. Pastikan nama file PDF persis sama dengan ID atau Nama Karyawan.' });
         }
     } catch (err) {
         console.log("❌ ERROR SAAT UPLOAD SLIP:", err.message);
-        await Promise.all((req.files || []).map(file => fs.promises.unlink(file.path).catch(() => {})));
         res.status(500).json({ success: false, error: err.message });
     }
 });
@@ -422,6 +428,7 @@ app.delete('/api/slips/:id', authenticateToken, requireAdmin, async (req, res) =
     try {
         const slipId = req.params.id;
 
+        // Ambil data file_url untuk dihapus dari Supabase Storage jika perlu
         const { data: slip, error: fetchError } = await supabase
             .from('salary_slips')
             .select('file_url')
@@ -429,8 +436,12 @@ app.delete('/api/slips/:id', authenticateToken, requireAdmin, async (req, res) =
             .single();
 
         if (!fetchError && slip && slip.file_url) {
-            const filePath = path.join(__dirname, slip.file_url);
-            await fs.promises.unlink(filePath).catch(() => {});
+            // Ekstrak nama file dari publicUrl Supabase
+            const urlParts = slip.file_url.split('/');
+            const fileName = urlParts[urlParts.length - 1];
+            if (fileName) {
+                await supabase.storage.from('salary-slips').remove([fileName]).catch(() => {});
+            }
         }
 
         const { error } = await supabase
@@ -460,12 +471,13 @@ app.delete('/api/slips', authenticateToken, requireAdmin, async (req, res) => {
             .in('id', slip_ids);
 
         if (!fetchError && slips) {
-            await Promise.all(slips.map(s => {
-                if (s.file_url) {
-                    const filePath = path.join(__dirname, s.file_url);
-                    return fs.promises.unlink(filePath).catch(() => {});
-                }
-            }));
+            const fileNamesToRemove = slips
+                .map(s => s.file_url ? s.file_url.split('/').pop() : null)
+                .filter(Boolean);
+
+            if (fileNamesToRemove.length > 0) {
+                await supabase.storage.from('salary-slips').remove(fileNamesToRemove).catch(() => {});
+            }
         }
 
         const { error } = await supabase
