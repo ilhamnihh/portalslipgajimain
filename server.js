@@ -311,10 +311,9 @@ app.post('/api/employees/import', authenticateToken, requireAdmin, uploadExcel.s
     }
 });
 
-// API Upload Multiple PDF Slips dengan Pencocokan Persis (Exact Match)
 app.post('/api/upload-slips', authenticateToken, requireAdmin, upload.array('slip_files'), async (req, res) => {
     try {
-        const { month, year } = req.body;
+        const { month, period, year } = req.body;
         const files = req.files;
 
         if (!files || files.length === 0) {
@@ -330,6 +329,8 @@ app.post('/api/upload-slips', authenticateToken, requireAdmin, upload.array('sli
 
         let successCount = 0;
         let slipsToInsert = [];
+
+        const formattedMonth = `${month || 'Januari'} (${period || 'Tahap 1'})`;
 
         files.forEach((file) => {
             const fileNameClean = file.originalname.toLowerCase().replace(/\.pdf$/, '').trim();
@@ -350,7 +351,7 @@ app.post('/api/upload-slips', authenticateToken, requireAdmin, upload.array('sli
             if (targetEmp) {
                 slipsToInsert.push({
                     employee_id: targetEmp.employee_id,
-                    month: month || 'Januari',
+                    month: formattedMonth,
                     year: year ? parseInt(year) : 2026,
                     file_url: `/uploads/${path.basename(file.filename)}`,
                     file_name: file.originalname
@@ -371,7 +372,7 @@ app.post('/api/upload-slips', authenticateToken, requireAdmin, upload.array('sli
                 .filter(file => !matchedNames.has(file.filename))
                 .map(file => fs.promises.unlink(file.path).catch(() => {})));
 
-            res.json({ success: true, message: `${successCount} dari ${files.length} file slip gaji berhasil dicocokkan dan diunggah!` });
+            res.json({ success: true, message: `${successCount} dari ${files.length} file slip gaji (${formattedMonth}) berhasil dicocokkan dan diunggah!` });
         } else {
             await Promise.all(files.map(file => fs.promises.unlink(file.path).catch(() => {})));
             res.status(400).json({ success: false, message: 'Gagal mencocokkan nama file. Pastikan nama file PDF persis sama dengan ID atau Nama Karyawan.' });
@@ -467,3 +468,8 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`Server berjalan di http://localhost:${PORT}`);
 });
+```[cite: 1]
+
+---
+
+Beri tahu ya kalau file `server.js` ini sudah selesai disalin, nanti langsung saya kirim file `index.html`-nya!
