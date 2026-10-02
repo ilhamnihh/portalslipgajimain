@@ -55,6 +55,28 @@
                         <p id="user-display-role" class="text-xs text-slate-500 uppercase">Role</p>
                     </div>
                 </div>
+
+                <!-- TOMBOL KOTAK MASUK / MAILBOX NOTIFIKASI ADMIN -->
+                <div id="admin-mailbox-container" class="hidden relative">
+                    <button onclick="toggleMailboxDropdown()" class="relative p-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl transition flex items-center space-x-2">
+                        <i class="fa-solid fa-envelope text-base"></i>
+                        <span class="text-xs font-semibold hidden md:inline">Kotak Masuk</span>
+                        <!-- Badge Jumlah Komplain -->
+                        <span id="mailbox-badge" class="absolute -top-1 -right-1 bg-rose-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full hidden">0</span>
+                    </button>
+
+                    <!-- Dropdown Panel Mailbox -->
+                    <div id="mailbox-dropdown" class="hidden absolute right-0 mt-2 w-80 md:w-96 bg-white rounded-2xl shadow-2xl border border-slate-100 p-4 z-50 space-y-3">
+                        <div class="flex justify-between items-center border-b pb-2">
+                            <h4 class="font-bold text-slate-900 text-sm"><i class="fa-solid fa-comments text-amber-500 mr-1.5"></i> Komplain Terbaru</h4>
+                            <span id="mailbox-count" class="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-medium">0 Pesan</span>
+                        </div>
+                        <div id="mailbox-items-container" class="max-h-72 overflow-y-auto space-y-2.5 text-xs">
+                            <!-- Daftar pesan komplain akan dimuat secara dinamis -->
+                        </div>
+                    </div>
+                </div>
+
                 <button onclick="logout()" class="px-4 py-2 text-rose-600 hover:bg-rose-50 rounded-xl font-medium text-sm transition">
                     <i class="fa-solid fa-arrow-right-from-bracket mr-1"></i> Keluar
                 </button>

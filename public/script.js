@@ -87,6 +87,23 @@ function toggleSelectAllSlips(source) {
     checkboxes.forEach(cb => cb.checked = source.checked);
 }
 
+// Fungsi Buka/Tutup Panel Dropdown Mailbox Notifikasi Admin
+function toggleMailboxDropdown() {
+    const dropdown = document.getElementById('mailbox-dropdown');
+    if (dropdown) {
+        dropdown.classList.toggle('hidden');
+    }
+}
+
+// Tutup dropdown jika pengguna mengklik di luar area mailbox
+window.addEventListener('click', function(e) {
+    const container = document.getElementById('admin-mailbox-container');
+    const dropdown = document.getElementById('mailbox-dropdown');
+    if (container && dropdown && !container.contains(e.target)) {
+        dropdown.classList.add('hidden');
+    }
+});
+
 async function loadAdminData() {
     const empRes = await fetch('/api/employees', { headers: authHeaders() });
     const employees = await empRes.json();
@@ -153,39 +170,79 @@ function renderEmployeeTable(employees) {
     `).join('');
 }
 
-// Fitur Komplain Karyawan & Admin (Anti-undefined ketat)
+// Fitur Komplain Karyawan & Admin (Terintegrasi Mailbox Notifikasi & Anti-undefined)
 async function loadAdminComplaints() {
     try {
         const res = await fetch('/api/complaints', { headers: authHeaders() });
         const complaints = await res.json();
 
+        // 1. Update Badge & Kotak Mailbox di Header Admin
+        const mailboxContainer = document.getElementById('admin-mailbox-container');
+        const mailboxBadge = document.getElementById('mailbox-badge');
+        const mailboxCount = document.getElementById('mailbox-count');
+        const mailboxItemsContainer = document.getElementById('mailbox-items-container');
+
+        if (currentUser && currentUser.role === 'admin' && mailboxContainer) {
+            mailboxContainer.classList.remove('hidden');
+            
+            if (complaints.length > 0) {
+                mailboxBadge.innerText = complaints.length;
+                mailboxBadge.classList.remove('hidden');
+                mailboxCount.innerText = `${complaints.length} Pesan`;
+
+                mailboxItemsContainer.innerHTML = complaints.map(c => {
+                    let empName = c.employee_name;
+                    if (!empName || empName === 'undefined' || empName === 'null') {
+                        empName = `Karyawan (${c.employee_id})`;
+                    }
+                    return `
+                        <div class="p-3 bg-slate-50 hover:bg-slate-100 rounded-xl border transition space-y-1">
+                            <div class="flex justify-between items-center font-semibold text-slate-800">
+                                <span>${empName}</span>
+                                <button onclick="deleteComplaint(${c.id})" class="text-emerald-600 hover:text-emerald-700 font-bold text-[11px] bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                                    <i class="fa-solid fa-check mr-1"></i> Selesai
+                                </button>
+                            </div>
+                            <p class="text-slate-600 whitespace-pre-wrap">${c.message || '-'}</p>
+                            <p class="text-[10px] text-slate-400 text-right">${c.created_at ? new Date(c.created_at).toLocaleString('id-ID') : '-'}</p>
+                        </div>
+                    `;
+                }).join('');
+            } else {
+                mailboxBadge.classList.add('hidden');
+                mailboxCount.innerText = '0 Pesan';
+                mailboxItemsContainer.innerHTML = `<p class="text-center text-slate-400 py-4">Tidak ada pesan komplain baru.</p>`;
+            }
+        }
+
+        // 2. Render ke Tabel Komplain Utama di Dashboard Admin
         const tbody = document.getElementById('admin-complaints-table-body');
-        if (!tbody) return;
+        if (tbody) {
+            tbody.innerHTML = complaints.length === 0 ? 
+                `<tr><td colspan="4" class="p-4 text-center text-slate-400">Belum ada komplain dari karyawan.</td></tr>` : 
+                complaints.map(c => {
+                    let empName = c.employee_name;
+                    if (!empName || empName === 'undefined' || empName === 'null') {
+                        empName = `Karyawan (${c.employee_id})`;
+                    }
+                    const empId = c.employee_id || '-';
+                    const messageText = c.message || '-';
+                    const formattedDate = c.created_at ? new Date(c.created_at).toLocaleString('id-ID') : '-';
 
-        tbody.innerHTML = complaints.length === 0 ? 
-            `<tr><td colspan="4" class="p-4 text-center text-slate-400">Belum ada komplain dari karyawan.</td></tr>` : 
-            complaints.map(c => {
-                let empName = c.employee_name;
-                if (!empName || empName === 'undefined' || empName === 'null') {
-                    empName = `Karyawan (${c.employee_id})`;
-                }
-                const empId = c.employee_id || '-';
-                const messageText = c.message || '-';
-                const formattedDate = c.created_at ? new Date(c.created_at).toLocaleString('id-ID') : '-';
-
-                return `
-                <tr class="border-b hover:bg-slate-50/50">
-                    <td class="p-3"><b>${empId}</b><br><span class="text-xs text-slate-500">${empName}</span></td>
-                    <td class="p-3 text-slate-700 whitespace-pre-wrap">${messageText}</td>
-                    <td class="p-3 text-xs text-slate-400">${formattedDate}</td>
-                    <td class="p-3">
-                        <button onclick="deleteComplaint(${c.id})" class="px-3 py-1.5 bg-emerald-50 text-emerald-600 rounded-lg text-xs font-semibold hover:bg-emerald-100 transition">
-                            <i class="fa-solid fa-check mr-1"></i> Selesaikan
-                        </button>
-                    </td>
-                </tr>
-            `;
-            }).join('');
+                    return `
+                    <tr class="border-b hover:bg-slate-50/50">
+                        <td class="p-3"><b>${empId}</b><br><span class="text-xs text-slate-500">${empName}</span></td>
+                        <td class="p-3 text-slate-700 whitespace-pre-wrap">${messageText}</td>
+                        <td class="p-3 text-xs text-slate-400">${formattedDate}</td>
+                        <td class="p-3">
+                            <button onclick="deleteComplaint(${c.id})" class="px-3 py-1.5 bg-emerald-50 text-emerald-600 rounded-lg text-xs font-semibold hover:bg-emerald-100 transition">
+                                <i class="fa-solid fa-check mr-1"></i> Selesaikan
+                            </button>
+                        </td>
+                    </tr>
+                `;
+                }).join('');
+        }
     } catch (err) {
         console.error("Gagal memuat komplain:", err);
     }
