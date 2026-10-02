@@ -22,7 +22,6 @@ app.use('/uploads', express.static(UPLOAD_DIR));
 
 fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 
-// Gunakan memoryStorage agar file ditangkap dulu di RAM sebelum dikirim ke Supabase Storage
 const upload = multer({
     storage: multer.memoryStorage(),
     limits: { fileSize: 20 * 1024 * 1024 },
@@ -136,7 +135,6 @@ app.get('/api/employees', authenticateToken, requireAdmin, async (req, res) => {
     }
 });
 
-// API Search Karyawan
 app.get('/api/employees/search', authenticateToken, requireAdmin, async (req, res) => {
     try {
         const keyword = req.query.q || '';
@@ -320,7 +318,6 @@ app.post('/api/employees/import', authenticateToken, requireAdmin, uploadExcel.s
     }
 });
 
-// --- API UPLOAD SLIP KE SUPABASE STORAGE (BUCKET) ---
 app.post('/api/upload-slips', authenticateToken, requireAdmin, upload.array('slip_files'), async (req, res) => {
     try {
         const { month, period, year } = req.body;
@@ -358,10 +355,8 @@ app.post('/api/upload-slips', authenticateToken, requireAdmin, upload.array('sli
             });
 
             if (targetEmp) {
-                // Buat nama file unik untuk disimpan di Supabase Storage
                 const uniqueFileName = `${Date.now()}-${Math.round(Math.random() * 1E9)}_${file.originalname.replace(/\s+/g, '_')}`;
                 
-                // Upload buffer ke Supabase Bucket 'salary-slips'
                 const { data: uploadData, error: uploadError } = await supabase.storage
                     .from('salary-slips')
                     .upload(uniqueFileName, file.buffer, {
@@ -370,11 +365,9 @@ app.post('/api/upload-slips', authenticateToken, requireAdmin, upload.array('sli
                     });
 
                 if (uploadError) {
-                    console.log("❌ Gagal upload ke Supabase Storage:", uploadError.message);
                     continue;
                 }
 
-                // Dapatkan Public URL dari file yang di-upload
                 const { data: publicUrlData } = supabase.storage
                     .from('salary-slips')
                     .getPublicUrl(uniqueFileName);
@@ -383,7 +376,7 @@ app.post('/api/upload-slips', authenticateToken, requireAdmin, upload.array('sli
                     employee_id: targetEmp.employee_id,
                     month: formattedMonth,
                     year: year ? parseInt(year) : 2026,
-                    file_url: publicUrlData.publicUrl, // URL publik Supabase
+                    file_url: publicUrlData.publicUrl,
                     file_name: file.originalname
                 });
                 successCount++;
@@ -402,7 +395,6 @@ app.post('/api/upload-slips', authenticateToken, requireAdmin, upload.array('sli
             res.status(400).json({ success: false, message: 'Gagal mencocokkan nama file. Pastikan nama file PDF persis sama dengan ID atau Nama Karyawan.' });
         }
     } catch (err) {
-        console.log("❌ ERROR SAAT UPLOAD SLIP:", err.message);
         res.status(500).json({ success: false, error: err.message });
     }
 });
@@ -428,7 +420,6 @@ app.delete('/api/slips/:id', authenticateToken, requireAdmin, async (req, res) =
     try {
         const slipId = req.params.id;
 
-        // Ambil data file_url untuk dihapus dari Supabase Storage jika perlu
         const { data: slip, error: fetchError } = await supabase
             .from('salary_slips')
             .select('file_url')
@@ -436,7 +427,6 @@ app.delete('/api/slips/:id', authenticateToken, requireAdmin, async (req, res) =
             .single();
 
         if (!fetchError && slip && slip.file_url) {
-            // Ekstrak nama file dari publicUrl Supabase
             const urlParts = slip.file_url.split('/');
             const fileName = urlParts[urlParts.length - 1];
             if (fileName) {
@@ -539,6 +529,40 @@ app.delete('/api/complaints/:id', authenticateToken, requireAdmin, async (req, r
 
         if (error) throw error;
         res.json({ success: true, message: 'Komplain berhasil diselesaikan/dihapus.' });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// --- API GANTI PASSWORD KARYAWAN ---
+app.put('/api/employee/change-password', authenticateToken, async (req, res) => {
+    try {
+        const { current_password, new_password } = req.body;
+        const employee_id = req.user.employee_id;
+
+        if (!current_password || !new_password) {
+            return res.status(400).json({ success: false, message: 'Password lama dan password baru wajib diisi!' });
+        }
+
+        const { data: user, error: fetchError } = await supabase
+            .from('users')
+            .select('*')
+            .eq('employee_id', employee_id)
+            .eq('password', current_password)
+            .maybeSingle();
+
+        if (fetchError || !user) {
+            return res.status(400).json({ success: false, message: 'Password lama salah!' });
+        }
+
+        const { error: updateError } = await supabase
+            .from('users')
+            .update({ password: new_password })
+            .eq('employee_id', employee_id);
+
+        if (updateError) throw updateError;
+
+        res.json({ success: true, message: 'Password berhasil diperbarui!' });
     } catch (err) {
         res.status(500).json({ success: false, error: err.message });
     }

@@ -209,6 +209,32 @@ if (complaintForm) {
     });
 }
 
+// Handler Ganti Password Mandiri oleh Karyawan
+const changePasswordForm = document.getElementById('change-password-form');
+if (changePasswordForm) {
+    changePasswordForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const currentPassword = document.getElementById('current-password').value;
+        const newPassword = document.getElementById('new-password').value;
+
+        try {
+            const res = await fetch('/api/employee/change-password', {
+                method: 'PUT',
+                headers: authHeaders({ 'Content-Type': 'application/json' }),
+                body: JSON.stringify({ current_password: currentPassword, new_password: newPassword })
+            });
+            const data = await res.json();
+
+            alert(data.message || data.error);
+            if (data.success) {
+                changePasswordForm.reset();
+            }
+        } catch (err) {
+            alert("Terjadi kesalahan saat mengubah password.");
+        }
+    });
+}
+
 function openEditModal(id, name, position) {
     document.getElementById('edit-emp-id-hidden').value = id;
     document.getElementById('edit-emp-id-display').value = id;
