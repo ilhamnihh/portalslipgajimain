@@ -153,7 +153,7 @@ function renderEmployeeTable(employees) {
     `).join('');
 }
 
-// Fitur Komplain Karyawan & Admin (Diperbarui untuk mencegah nilai undefined)
+// Fitur Komplain Karyawan & Admin (Anti-undefined ketat)
 async function loadAdminComplaints() {
     try {
         const res = await fetch('/api/complaints', { headers: authHeaders() });
@@ -165,7 +165,10 @@ async function loadAdminComplaints() {
         tbody.innerHTML = complaints.length === 0 ? 
             `<tr><td colspan="4" class="p-4 text-center text-slate-400">Belum ada komplain dari karyawan.</td></tr>` : 
             complaints.map(c => {
-                const empName = (c.employee_name && c.employee_name !== 'undefined') ? c.employee_name : 'Karyawan';
+                let empName = c.employee_name;
+                if (!empName || empName === 'undefined' || empName === 'null') {
+                    empName = `Karyawan (${c.employee_id})`;
+                }
                 const empId = c.employee_id || '-';
                 const messageText = c.message || '-';
                 const formattedDate = c.created_at ? new Date(c.created_at).toLocaleString('id-ID') : '-';
