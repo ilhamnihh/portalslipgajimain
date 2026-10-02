@@ -484,7 +484,7 @@ app.delete('/api/slips', authenticateToken, requireAdmin, async (req, res) => {
     }
 });
 
-// --- API KOMPLAIN GAJI (Memastikan employee_name selalu terisi) ---
+// --- API KOMPLAIN GAJI (Diperbarui dengan sinkronisasi tabel users) ---
 app.post('/api/complaints', authenticateToken, async (req, res) => {
     try {
         const { message } = req.body;
@@ -492,11 +492,20 @@ app.post('/api/complaints', authenticateToken, async (req, res) => {
             return res.status(400).json({ success: false, message: 'Pesan komplain tidak boleh kosong!' });
         }
 
+        // Ambil nama lengkap terbaru langsung dari tabel users berdasarkan employee_id yang sedang login
+        const { data: userData } = await supabase
+            .from('users')
+            .select('full_name')
+            .eq('employee_id', req.user.employee_id)
+            .maybeSingle();
+
+        const employeeName = (userData && userData.full_name) ? userData.full_name : (req.user.full_name || 'Karyawan');
+
         const { error } = await supabase
             .from('salary_complaints')
             .insert([{
                 employee_id: req.user.employee_id,
-                employee_name: req.user.full_name || 'Karyawan',
+                employee_name: employeeName,
                 message: message.trim()
             }]);
 
