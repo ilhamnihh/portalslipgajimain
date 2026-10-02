@@ -153,28 +153,39 @@ function renderEmployeeTable(employees) {
     `).join('');
 }
 
-// Fitur Komplain Karyawan & Admin
+// Fitur Komplain Karyawan & Admin (Diperbarui untuk mencegah nilai undefined)
 async function loadAdminComplaints() {
-    const res = await fetch('/api/complaints', { headers: authHeaders() });
-    const complaints = await res.json();
+    try {
+        const res = await fetch('/api/complaints', { headers: authHeaders() });
+        const complaints = await res.json();
 
-    const tbody = document.getElementById('admin-complaints-table-body');
-    if (!tbody) return;
+        const tbody = document.getElementById('admin-complaints-table-body');
+        if (!tbody) return;
 
-    tbody.innerHTML = complaints.length === 0 ? 
-        `<tr><td colspan="4" class="p-4 text-center text-slate-400">Belum ada komplain dari karyawan.</td></tr>` : 
-        complaints.map(c => `
-        <tr class="border-b hover:bg-slate-50/50">
-            <td class="p-3"><b>${c.employee_id}</b><br><span class="text-xs text-slate-500">${c.employee_name}</span></td>
-            <td class="p-3 text-slate-700 whitespace-pre-wrap">${c.message}</td>
-            <td class="p-3 text-xs text-slate-400">${new Date(c.created_at).toLocaleString('id-ID')}</td>
-            <td class="p-3">
-                <button onclick="deleteComplaint(${c.id})" class="px-3 py-1.5 bg-emerald-50 text-emerald-600 rounded-lg text-xs font-semibold hover:bg-emerald-100 transition">
-                    <i class="fa-solid fa-check mr-1"></i> Selesaikan
-                </button>
-            </td>
-        </tr>
-    `).join('');
+        tbody.innerHTML = complaints.length === 0 ? 
+            `<tr><td colspan="4" class="p-4 text-center text-slate-400">Belum ada komplain dari karyawan.</td></tr>` : 
+            complaints.map(c => {
+                const empName = (c.employee_name && c.employee_name !== 'undefined') ? c.employee_name : 'Karyawan';
+                const empId = c.employee_id || '-';
+                const messageText = c.message || '-';
+                const formattedDate = c.created_at ? new Date(c.created_at).toLocaleString('id-ID') : '-';
+
+                return `
+                <tr class="border-b hover:bg-slate-50/50">
+                    <td class="p-3"><b>${empId}</b><br><span class="text-xs text-slate-500">${empName}</span></td>
+                    <td class="p-3 text-slate-700 whitespace-pre-wrap">${messageText}</td>
+                    <td class="p-3 text-xs text-slate-400">${formattedDate}</td>
+                    <td class="p-3">
+                        <button onclick="deleteComplaint(${c.id})" class="px-3 py-1.5 bg-emerald-50 text-emerald-600 rounded-lg text-xs font-semibold hover:bg-emerald-100 transition">
+                            <i class="fa-solid fa-check mr-1"></i> Selesaikan
+                        </button>
+                    </td>
+                </tr>
+            `;
+            }).join('');
+    } catch (err) {
+        console.error("Gagal memuat komplain:", err);
+    }
 }
 
 async function deleteComplaint(id) {

@@ -57,6 +57,7 @@ function createToken(user) {
     const payload = Buffer.from(JSON.stringify({
         employee_id: user.employee_id,
         role: user.role,
+        full_name: user.full_name,
         exp: Math.floor(Date.now() / 1000) + (8 * 60 * 60)
     })).toString('base64url');
     const signature = crypto.createHmac('sha256', AUTH_SECRET).update(payload).digest('base64url');
@@ -483,7 +484,7 @@ app.delete('/api/slips', authenticateToken, requireAdmin, async (req, res) => {
     }
 });
 
-// --- API KOMPLAIN GAJI ---
+// --- API KOMPLAIN GAJI (Memastikan employee_name selalu terisi) ---
 app.post('/api/complaints', authenticateToken, async (req, res) => {
     try {
         const { message } = req.body;
@@ -495,7 +496,7 @@ app.post('/api/complaints', authenticateToken, async (req, res) => {
             .from('salary_complaints')
             .insert([{
                 employee_id: req.user.employee_id,
-                employee_name: req.user.full_name,
+                employee_name: req.user.full_name || 'Karyawan',
                 message: message.trim()
             }]);
 
