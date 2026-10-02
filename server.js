@@ -126,7 +126,7 @@ app.get('/api/employees', authenticateToken, requireAdmin, async (req, res) => {
     try {
         const { data, error } = await supabase
             .from('users')
-            .select('*')
+            .select('employee_id, full_name, role, position, password')
             .eq('role', 'employee');
 
         if (error) throw error;
@@ -141,7 +141,7 @@ app.get('/api/employees/search', authenticateToken, requireAdmin, async (req, re
         const keyword = req.query.q || '';
         const { data, error } = await supabase
             .from('users')
-            .select('*')
+            .select('employee_id, full_name, role, position, password')
             .eq('role', 'employee')
             .or(`full_name.ilike.%${keyword}%,employee_id.ilike.%${keyword}%`);
 
@@ -213,7 +213,7 @@ app.put('/api/employees/:employee_id', authenticateToken, requireAdmin, async (r
 
         if (error) throw error;
 
-        res.json({ success: true, message: 'Data karyawan berhasil diperbarui!', user: data });
+        res.json({ success: true, message: 'Data dan password karyawan berhasil diperbarui!', user: data });
     } catch (err) {
         res.status(500).json({ success: false, error: err.message });
     }
@@ -484,7 +484,7 @@ app.delete('/api/slips', authenticateToken, requireAdmin, async (req, res) => {
     }
 });
 
-// --- API KOMPLAIN GAJI (Diperbarui dengan sinkronisasi tabel users) ---
+// --- API KOMPLAIN GAJI ---
 app.post('/api/complaints', authenticateToken, async (req, res) => {
     try {
         const { message } = req.body;
@@ -492,7 +492,6 @@ app.post('/api/complaints', authenticateToken, async (req, res) => {
             return res.status(400).json({ success: false, message: 'Pesan komplain tidak boleh kosong!' });
         }
 
-        // Ambil nama lengkap terbaru langsung dari tabel users berdasarkan employee_id yang sedang login
         const { data: userData } = await supabase
             .from('users')
             .select('full_name')

@@ -190,6 +190,7 @@
                                     <th class="p-3">ID</th>
                                     <th class="p-3">Nama</th>
                                     <th class="p-3">Jabatan</th>
+                                    <th class="p-3">Password</th>
                                     <th class="p-3 rounded-r-xl">Aksi</th>
                                 </tr>
                             </thead>
@@ -292,7 +293,7 @@
     <div id="edit-modal" class="hidden fixed inset-0 bg-slate-900/50 flex items-center justify-center p-4 z-50">
         <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl space-y-4">
             <div class="flex justify-between items-center border-b pb-3">
-                <h3 class="font-bold text-lg text-slate-900">Edit Data Karyawan</h3>
+                <h3 class="font-bold text-lg text-slate-900">Edit Data & Reset Password</h3>
                 <button onclick="closeEditModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
             </div>
             <form id="edit-employee-form" class="space-y-3">
@@ -306,8 +307,8 @@
                     <input type="text" id="edit-emp-name" required class="w-full px-3 py-2 border rounded-xl">
                 </div>
                 <div>
-                    <label class="block text-xs font-semibold uppercase mb-1">Password Baru <span class="text-slate-400 font-normal">(Kosongkan jika tidak diubah)</span></label>
-                    <input type="text" id="edit-emp-pass" placeholder="Biarkan kosong jika tetap" class="w-full px-3 py-2 border rounded-xl">
+                    <label class="block text-xs font-semibold uppercase mb-1">Password Karyawan (Reset / Ubah)</label>
+                    <input type="text" id="edit-emp-pass" required placeholder="Masukkan password baru" class="w-full px-3 py-2 border rounded-xl font-mono text-sm">
                 </div>
                 <div>
                     <label class="block text-xs font-semibold uppercase mb-1">Jabatan</label>
