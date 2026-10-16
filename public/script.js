@@ -334,7 +334,7 @@ async function loadEmployeeComplaintsHistory() {
 
                 const statusBadge = isReplied 
                     ? `<span class="px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-md text-[10px] font-semibold border border-emerald-200"><i class="fa-solid fa-check-double mr-1"></i> Sudah dibaca & sudah dibalas</span>` 
-                    : `<span class="px-2.5 py-1 bg-amber-50 text-amber-700 rounded-md text-[10px] font-semibold border border-amber-200"><i class="fa-solid fa-clock mr-1"></i> Pending / Menunggu Respon</span>`;
+                    : `<span class="px-2.5 py-1 bg-amber-50 text-amber-700 rounded-md text-[10px] font-semibold border border-emerald-200"><i class="fa-solid fa-clock mr-1"></i> Pending / Menunggu Respon</span>`;
 
                 const replyBox = isReplied 
                     ? `<div class="mt-2 p-3 bg-blue-50/60 rounded-xl border border-blue-100 text-xs text-slate-700">
@@ -386,4 +386,236 @@ if (changePasswordForm) {
 
 function openEditModal(id, name, position) {
     document.getElementById('edit-emp-id-hidden').value = id;
-    document.getElementById('edit-
+    document.getElementById('edit-emp-id-display').value = id;
+    document.getElementById('edit-emp-name').value = name;
+    document.getElementById('edit-emp-position').value = position;
+    document.getElementById('edit-emp-pass').value = '';
+    document.getElementById('edit-modal').classList.remove('hidden');
+}
+
+function closeEditModal() {
+    document.getElementById('edit-modal').classList.add('hidden');
+}
+
+document.getElementById('edit-employee-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const employee_id = document.getElementById('edit-emp-id-hidden').value;
+    const payload = {
+        full_name: document.getElementById('edit-emp-name').value,
+        position: document.getElementById('edit-emp-position').value,
+        password: document.getElementById('edit-emp-pass').value
+    };
+
+    try {
+        const res = await fetch(`/api/employees/${employee_id}`, {
+            method: 'PUT',
+            headers: authHeaders({ 'Content-Type': 'application/json' }),
+            body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        
+        alert(data.message || data.error || "Berhasil memperbarui data");
+        if (data.success) {
+            closeEditModal();
+            loadAdminData();
+        }
+    } catch (err) {
+        alert("Terjadi kesalahan saat memperbarui data karyawan.");
+    }
+});
+
+async function deleteEmployee(employeeId, fullName) {
+    if (!confirm(`Apakah Anda yakin ingin menghapus karyawan "${fullName}" (${employeeId})?`)) {
+        return;
+    }
+
+    try {
+        const res = await fetch(`/api/employees/${employeeId}`, {
+            method: 'DELETE',
+            headers: authHeaders()
+        });
+        const data = await res.json();
+
+        alert(data.message || data.error || "Proses selesai");
+        if (data.success) {
+            loadAdminData();
+        }
+    } catch (err) {
+        alert("Terjadi kesalahan saat menghapus data karyawan.");
+    }
+}
+
+async function deleteSelectedEmployees() {
+    const selectedCheckboxes = document.querySelectorAll('.emp-checkbox:checked');
+    
+    if (selectedCheckboxes.length === 0) {
+        alert("Pilih setidaknya satu karyawan yang ingin dihapus!");
+        return;
+    }
+
+    if (!confirm(`Apakah Anda yakin ingin menghapus ${selectedCheckboxes.length} karyawan yang dipilih?`)) {
+        return;
+    }
+
+    const employeeIds = Array.from(selectedCheckboxes).map(cb => cb.value);
+
+    try {
+        const res = await fetch('/api/employees', {
+            method: 'DELETE',
+            headers: authHeaders({ 'Content-Type': 'application/json' }),
+            body: JSON.stringify({ employee_ids: employeeIds })
+        });
+        const data = await res.json();
+
+        alert(data.message || data.error || "Proses selesai");
+        if (data.success) {
+            loadAdminData();
+        }
+    } catch (err) {
+        alert("Terjadi kesalahan saat menghapus data karyawan.");
+    }
+}
+
+async function deleteSlip(slipId, fileName) {
+    if (!confirm(`Apakah Anda yakin ingin menghapus file slip "${fileName}"?`)) {
+        return;
+    }
+
+    try {
+        const res = await fetch(`/api/slips/${slipId}`, {
+            method: 'DELETE',
+            headers: authHeaders()
+        });
+        const data = await res.json();
+
+        alert(data.message || data.error || "Proses selesai");
+        if (data.success) {
+            loadAdminData();
+        }
+    } catch (err) {
+        alert("Terjadi kesalahan saat menghapus slip gaji.");
+    }
+}
+
+async function deleteSelectedSlips() {
+    const selectedCheckboxes = document.querySelectorAll('.slip-checkbox:checked');
+    
+    if (selectedCheckboxes.length === 0) {
+        alert("Pilih setidaknya satu slip gaji yang ingin dihapus!");
+        return;
+    }
+
+    if (!confirm(`Apakah Anda yakin ingin menghapus ${selectedCheckboxes.length} slip gaji yang dipilih?`)) {
+        return;
+    }
+
+    const slipIds = Array.from(selectedCheckboxes).map(cb => cb.value);
+
+    try {
+        const res = await fetch('/api/slips', {
+            method: 'DELETE',
+            headers: authHeaders({ 'Content-Type': 'application/json' }),
+            body: JSON.stringify({ slip_ids: slipIds })
+        });
+        const data = await res.json();
+
+        alert(data.message || data.error || "Proses selesai");
+        if (data.success) {
+            loadAdminData();
+        }
+    } catch (err) {
+        alert("Terjadi kesalahan saat menghapus slip gaji.");
+    }
+}
+
+document.getElementById('import-excel-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const fileInput = document.getElementById('excel-file-input');
+    
+    if (fileInput.files.length === 0) {
+        alert("Pilih file Excel terlebih dahulu!");
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('employee_file', fileInput.files[0]);
+
+    try {
+        const res = await fetch('/api/employees/import', {
+            method: 'POST',
+            headers: authHeaders(),
+            body: formData
+        });
+        const data = await res.json();
+
+        alert(data.message || data.error || "Proses impor selesai.");
+        if (data.success) {
+            document.getElementById('import-excel-form').reset();
+            loadAdminData();
+        }
+    } catch (err) {
+        alert("Terjadi kesalahan saat mengunggah file Excel.");
+    }
+});
+
+document.getElementById('add-employee-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const payload = {
+        employee_id: document.getElementById('new-emp-id').value,
+        full_name: document.getElementById('new-emp-name').value,
+        password: document.getElementById('new-emp-pass').value,
+        position: document.getElementById('new-emp-position').value
+    };
+    const res = await fetch('/api/employees', { method: 'POST', headers: authHeaders({ 'Content-Type': 'application/json' }), body: JSON.stringify(payload) });
+    const data = await res.json();
+    alert(data.message || data.error || "Berhasil");
+    if(data.success) { document.getElementById('add-employee-form').reset(); loadAdminData(); }
+});
+
+document.getElementById('upload-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const formData = new FormData();
+    formData.append('month', document.getElementById('upload-month').value);
+    formData.append('period', document.getElementById('upload-period').value);
+    formData.append('year', document.getElementById('upload-year').value);
+    
+    let files = document.getElementById('slip-files-input').files;
+    for (let i = 0; i < files.length; i++) { 
+        formData.append('slip_files', files[i]); 
+    }
+
+    try {
+        const res = await fetch('/api/upload-slips', { 
+            method: 'POST', 
+            headers: authHeaders(), 
+            body: formData 
+        });
+        const data = await res.json();
+        
+        alert(data.message || data.error || "Proses upload selesai.");
+        if (data.success) { 
+            document.getElementById('upload-form').reset(); 
+            loadAdminData(); 
+        }
+    } catch (err) {
+        alert("Terjadi kesalahan pada server saat mengunggah file.");
+    }
+});
+
+async function loadEmployeeSlips() {
+    const res = await fetch('/api/slips', { headers: authHeaders() });
+    const slips = await res.json();
+    document.getElementById('employee-slips-container').innerHTML = slips.length === 0 ? `
+        <div class="col-span-2 p-8 text-center bg-slate-50 rounded-xl border text-slate-400">Belum ada slip gaji untuk Anda.</div>
+    ` : slips.map(s => `
+        <div class="p-5 rounded-2xl border bg-slate-50 flex justify-between items-center">
+            <div>
+                <h4 class="font-bold text-slate-900 text-base">Periode ${s.month} ${s.year}</h4>
+                <p class="text-xs text-slate-500 mt-1"><i class="fa-solid fa-file-pdf text-rose-500 mr-1"></i> ${s.file_name}</p>
+            </div>
+            <a href="${s.file_url}" target="_blank" class="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold transition shadow-md">
+                <i class="fa-solid fa-download mr-1"></i> Unduh PDF
+            </a>
+        </div>
+    `).join('');
+}
