@@ -60,6 +60,7 @@ function initDashboard() {
         document.getElementById('employee-dashboard').classList.remove('hidden');
         document.getElementById('emp-welcome-name').innerText = currentUser.full_name;
         loadEmployeeSlips();
+        loadEmployeeComplaintsHistory();
     }
 }
 
@@ -87,7 +88,6 @@ function toggleSelectAllSlips(source) {
     checkboxes.forEach(cb => cb.checked = source.checked);
 }
 
-// Fungsi Buka/Tutup Panel Dropdown Mailbox Notifikasi Admin
 function toggleMailboxDropdown() {
     const dropdown = document.getElementById('mailbox-dropdown');
     if (dropdown) {
@@ -95,7 +95,6 @@ function toggleMailboxDropdown() {
     }
 }
 
-// Tutup dropdown jika pengguna mengklik di luar area mailbox
 window.addEventListener('click', function(e) {
     const container = document.getElementById('admin-mailbox-container');
     const dropdown = document.getElementById('mailbox-dropdown');
@@ -137,7 +136,6 @@ async function loadAdminData() {
     `).join('');
 }
 
-// Fungsi Pencarian Karyawan Real-time
 async function searchEmployees(keyword) {
     const res = await fetch(`/api/employees/search?q=${encodeURIComponent(keyword)}`, { headers: authHeaders() });
     const employees = await res.json();
@@ -170,13 +168,11 @@ function renderEmployeeTable(employees) {
     `).join('');
 }
 
-// Fitur Komplain Karyawan & Admin (Terintegrasi Mailbox Notifikasi & Anti-undefined)
 async function loadAdminComplaints() {
     try {
         const res = await fetch('/api/complaints', { headers: authHeaders() });
         const complaints = await res.json();
 
-        // 1. Update Badge & Kotak Mailbox di Header Admin
         const mailboxContainer = document.getElementById('admin-mailbox-container');
         const mailboxBadge = document.getElementById('mailbox-badge');
         const mailboxCount = document.getElementById('mailbox-count');
@@ -199,8 +195,8 @@ async function loadAdminComplaints() {
                         <div class="p-3 bg-slate-50 hover:bg-slate-100 rounded-xl border transition space-y-1">
                             <div class="flex justify-between items-center font-semibold text-slate-800">
                                 <span>${empName}</span>
-                                <button onclick="deleteComplaint(${c.id})" class="text-emerald-600 hover:text-emerald-700 font-bold text-[11px] bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
-                                    <i class="fa-solid fa-check mr-1"></i> Selesai
+                                <button onclick="openReplyModal(${c.id}, '${c.message ? c.message.replace(/'/g, "\\'") : ''}')" class="text-blue-600 hover:text-blue-700 font-bold text-[11px] bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200">
+                                    <i class="fa-solid fa-reply mr-1"></i> Balas
                                 </button>
                             </div>
                             <p class="text-slate-600 whitespace-pre-wrap">${c.message || '-'}</p>
@@ -215,7 +211,6 @@ async function loadAdminComplaints() {
             }
         }
 
-        // 2. Render ke Tabel Komplain Utama di Dashboard Admin
         const tbody = document.getElementById('admin-complaints-table-body');
         if (tbody) {
             tbody.innerHTML = complaints.length === 0 ? 
@@ -227,16 +222,26 @@ async function loadAdminComplaints() {
                     }
                     const empId = c.employee_id || '-';
                     const messageText = c.message || '-';
-                    const formattedDate = c.created_at ? new Date(c.created_at).toLocaleString('id-ID') : '-';
+
+                    const statusBadge = c.status === 'Dijawab' 
+                        ? `<span class="px-2 py-0.5 bg-blue-50 text-blue-600 rounded-md text-[11px] font-semibold border border-blue-200">Dijawab</span>` 
+                        : `<span class="px-2 py-0.5 bg-amber-50 text-amber-600 rounded-md text-[11px] font-semibold border border-amber-200">Pending</span>`;
+
+                    const replyContent = c.reply 
+                        ? `<p class="text-xs text-blue-700 mt-1 bg-blue-50/50 p-2 rounded-lg border border-blue-100"><b>Balasan Admin:</b> ${c.reply}</p>` 
+                        : `<p class="text-xs text-slate-400 mt-1 italic">Belum dibalas</p>`;
 
                     return `
                     <tr class="border-b hover:bg-slate-50/50">
                         <td class="p-3"><b>${empId}</b><br><span class="text-xs text-slate-500">${empName}</span></td>
-                        <td class="p-3 text-slate-700 whitespace-pre-wrap">${messageText}</td>
-                        <td class="p-3 text-xs text-slate-400">${formattedDate}</td>
-                        <td class="p-3">
-                            <button onclick="deleteComplaint(${c.id})" class="px-3 py-1.5 bg-emerald-50 text-emerald-600 rounded-lg text-xs font-semibold hover:bg-emerald-100 transition">
-                                <i class="fa-solid fa-check mr-1"></i> Selesaikan
+                        <td class="p-3 text-slate-700 whitespace-pre-wrap">${messageText}${replyContent}</td>
+                        <td class="p-3">${statusBadge}</td>
+                        <td class="p-3 text-center space-x-1 whitespace-nowrap">
+                            <button onclick="openReplyModal(${c.id}, '${messageText.replace(/'/g, "\\'")}')" class="px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg text-xs font-semibold hover:bg-blue-100 transition">
+                                <i class="fa-solid fa-reply mr-1"></i> Balas
+                            </button>
+                            <button onclick="deleteComplaint(${c.id})" class="px-3 py-1.5 bg-rose-50 text-rose-600 rounded-lg text-xs font-semibold hover:bg-rose-100 transition" title="Hapus">
+                                <i class="fa-solid fa-trash"></i>
                             </button>
                         </td>
                     </tr>
@@ -248,8 +253,45 @@ async function loadAdminComplaints() {
     }
 }
 
+function openReplyModal(id, message) {
+    document.getElementById('reply-complaint-id').value = id;
+    document.getElementById('reply-original-message').innerText = message;
+    document.getElementById('admin-reply-text').value = '';
+    document.getElementById('reply-modal').classList.remove('hidden');
+}
+
+function closeReplyModal() {
+    document.getElementById('reply-modal').classList.add('hidden');
+}
+
+const replyComplaintForm = document.getElementById('reply-complaint-form');
+if (replyComplaintForm) {
+    replyComplaintForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const id = document.getElementById('reply-complaint-id').value;
+        const reply = document.getElementById('admin-reply-text').value;
+
+        try {
+            const res = await fetch(`/api/complaints/${id}/reply`, {
+                method: 'PUT',
+                headers: authHeaders({ 'Content-Type': 'application/json' }),
+                body: JSON.stringify({ reply })
+            });
+            const data = await res.json();
+
+            alert(data.message || data.error);
+            if (data.success) {
+                closeReplyModal();
+                loadAdminComplaints();
+            }
+        } catch (err) {
+            alert("Gagal mengirim balasan.");
+        }
+    });
+}
+
 async function deleteComplaint(id) {
-    if (!confirm("Tandai komplain ini sebagai selesai?")) return;
+    if (!confirm("Hapus komplain ini?")) return;
     const res = await fetch(`/api/complaints/${id}`, { method: 'DELETE', headers: authHeaders() });
     const data = await res.json();
     alert(data.message);
@@ -273,6 +315,7 @@ if (complaintForm) {
             alert(data.message);
             if (data.success) {
                 complaintForm.reset();
+                loadEmployeeComplaintsHistory();
             }
         } catch (err) {
             alert("Gagal mengirim komplain.");
@@ -280,7 +323,44 @@ if (complaintForm) {
     });
 }
 
-// Handler Ganti Password Mandiri oleh Karyawan
+async function loadEmployeeComplaintsHistory() {
+    const container = document.getElementById('employee-complaints-history');
+    if (!container) return;
+
+    try {
+        const res = await fetch('/api/my-complaints', { headers: authHeaders() });
+        const complaints = await res.json();
+
+        container.innerHTML = complaints.length === 0 ? 
+            `<p class="text-center text-slate-400 py-4 text-xs">Anda belum pernah mengirim komplain.</p>` :
+            complaints.map(c => {
+                const statusBadge = c.status === 'Dijawab' 
+                    ? `<span class="px-2 py-0.5 bg-blue-50 text-blue-600 rounded-md text-[10px] font-semibold border border-blue-200">Sudah Dibalas</span>` 
+                    : `<span class="px-2 py-0.5 bg-amber-50 text-amber-600 rounded-md text-[10px] font-semibold border border-amber-200">Menunggu Respon</span>`;
+
+                const replyBox = c.reply 
+                    ? `<div class="mt-2 p-3 bg-blue-50/60 rounded-xl border border-blue-100 text-xs text-slate-700">
+                           <p class="font-semibold text-blue-900 mb-0.5"><i class="fa-solid fa-user-shield mr-1"></i> Tanggapan Admin:</p>
+                           <p>${c.reply}</p>
+                       </div>` 
+                    : `<p class="mt-2 text-[11px] text-slate-400 italic">Komplain sedang ditinjau oleh admin...</p>`;
+
+                return `
+                    <div class="p-4 bg-slate-50 rounded-xl border space-y-2 text-xs">
+                        <div class="flex justify-between items-center">
+                            <span class="text-slate-400">${c.created_at ? new Date(c.created_at).toLocaleString('id-ID') : ''}</span>
+                            ${statusBadge}
+                        </div>
+                        <p class="text-slate-800 font-medium"><b>Komplain Anda:</b> ${c.message}</p>
+                        ${replyBox}
+                    </div>
+                `;
+            }).join('');
+    } catch (err) {
+        console.error("Gagal memuat riwayat komplain karyawan", err);
+    }
+}
+
 const changePasswordForm = document.getElementById('change-password-form');
 if (changePasswordForm) {
     changePasswordForm.addEventListener('submit', async (e) => {
