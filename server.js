@@ -520,10 +520,17 @@ app.get('/api/complaints', authenticateToken, requireAdmin, async (req, res) => 
     try {
         const { data, error } = await supabase
             .from('salary_complaints')
-            .select('*')
-            .order('created_at', { ascending: false });
+            .select('*');
 
         if (error) throw error;
+
+        // Sorting: Status 'Pending' di atas, 'Dijawab' turun ke bawah, lalu urutkan berdasarkan waktu terbaru
+        data.sort((a, b) => {
+            if (a.status === 'Pending' && b.status !== 'Pending') return -1;
+            if (a.status !== 'Pending' && b.status === 'Pending') return 1;
+            return new Date(b.created_at) - new Date(a.created_at);
+        });
+
         res.json(data);
     } catch (err) {
         res.status(500).json({ success: false, error: err.message });

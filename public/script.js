@@ -181,16 +181,15 @@ async function loadAdminComplaints() {
         if (currentUser && currentUser.role === 'admin' && mailboxContainer) {
             mailboxContainer.classList.remove('hidden');
             
-            if (complaints.length > 0) {
-                mailboxBadge.innerText = complaints.length;
-                mailboxBadge.classList.remove('hidden');
-                mailboxCount.innerText = `${complaints.length} Pesan`;
+            const pendingComplaints = complaints.filter(c => c.status === 'Pending');
 
-                mailboxItemsContainer.innerHTML = complaints.map(c => {
-                    let empName = c.employee_name;
-                    if (!empName || empName === 'undefined' || empName === 'null') {
-                        empName = `Karyawan (${c.employee_id})`;
-                    }
+            if (pendingComplaints.length > 0) {
+                mailboxBadge.innerText = pendingComplaints.length;
+                mailboxBadge.classList.remove('hidden');
+                mailboxCount.innerText = `${pendingComplaints.length} Pesan`;
+
+                mailboxItemsContainer.innerHTML = pendingComplaints.map(c => {
+                    let empName = c.employee_name || `Karyawan (${c.employee_id})`;
                     return `
                         <div class="p-3 bg-slate-50 hover:bg-slate-100 rounded-xl border transition space-y-1">
                             <div class="flex justify-between items-center font-semibold text-slate-800">
@@ -216,29 +215,27 @@ async function loadAdminComplaints() {
             tbody.innerHTML = complaints.length === 0 ? 
                 `<tr><td colspan="4" class="p-4 text-center text-slate-400">Belum ada komplain dari karyawan.</td></tr>` : 
                 complaints.map(c => {
-                    let empName = c.employee_name;
-                    if (!empName || empName === 'undefined' || empName === 'null') {
-                        empName = `Karyawan (${c.employee_id})`;
-                    }
+                    let empName = c.employee_name || `Karyawan (${c.employee_id})`;
                     const empId = c.employee_id || '-';
                     const messageText = c.message || '-';
 
+                    // Label Status: Sudah dibaca & sudah dibalas vs Pending
                     const statusBadge = c.status === 'Dijawab' 
-                        ? `<span class="px-2 py-0.5 bg-blue-50 text-blue-600 rounded-md text-[11px] font-semibold border border-blue-200">Dijawab</span>` 
-                        : `<span class="px-2 py-0.5 bg-amber-50 text-amber-600 rounded-md text-[11px] font-semibold border border-amber-200">Pending</span>`;
+                        ? `<span class="px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-md text-[11px] font-semibold border border-emerald-200 inline-block"><i class="fa-solid fa-check-double mr-1"></i> Sudah dibaca & sudah dibalas</span>` 
+                        : `<span class="px-2.5 py-1 bg-amber-50 text-amber-700 rounded-md text-[11px] font-semibold border border-amber-200 inline-block"><i class="fa-solid fa-clock mr-1"></i> Pending / Belum dibalas</span>`;
 
                     const replyContent = c.reply 
-                        ? `<p class="text-xs text-blue-700 mt-1 bg-blue-50/50 p-2 rounded-lg border border-blue-100"><b>Balasan Admin:</b> ${c.reply}</p>` 
+                        ? `<p class="text-xs text-slate-700 mt-2 bg-slate-50 p-2.5 rounded-lg border"><b>Balasan Anda:</b> ${c.reply}</p>` 
                         : `<p class="text-xs text-slate-400 mt-1 italic">Belum dibalas</p>`;
 
                     return `
-                    <tr class="border-b hover:bg-slate-50/50">
+                    <tr class="border-b hover:bg-slate-50/50 ${c.status === 'Dijawab' ? 'bg-slate-50/60 opacity-80' : ''}">
                         <td class="p-3"><b>${empId}</b><br><span class="text-xs text-slate-500">${empName}</span></td>
                         <td class="p-3 text-slate-700 whitespace-pre-wrap">${messageText}${replyContent}</td>
                         <td class="p-3">${statusBadge}</td>
                         <td class="p-3 text-center space-x-1 whitespace-nowrap">
                             <button onclick="openReplyModal(${c.id}, '${messageText.replace(/'/g, "\\'")}')" class="px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg text-xs font-semibold hover:bg-blue-100 transition">
-                                <i class="fa-solid fa-reply mr-1"></i> Balas
+                                <i class="fa-solid fa-reply mr-1"></i> ${c.reply ? 'Edit Balasan' : 'Balas'}
                             </button>
                             <button onclick="deleteComplaint(${c.id})" class="px-3 py-1.5 bg-rose-50 text-rose-600 rounded-lg text-xs font-semibold hover:bg-rose-100 transition" title="Hapus">
                                 <i class="fa-solid fa-trash"></i>
@@ -335,8 +332,8 @@ async function loadEmployeeComplaintsHistory() {
             `<p class="text-center text-slate-400 py-4 text-xs">Anda belum pernah mengirim komplain.</p>` :
             complaints.map(c => {
                 const statusBadge = c.status === 'Dijawab' 
-                    ? `<span class="px-2 py-0.5 bg-blue-50 text-blue-600 rounded-md text-[10px] font-semibold border border-blue-200">Sudah Dibalas</span>` 
-                    : `<span class="px-2 py-0.5 bg-amber-50 text-amber-600 rounded-md text-[10px] font-semibold border border-amber-200">Menunggu Respon</span>`;
+                    ? `<span class="px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-md text-[10px] font-semibold border border-emerald-200"><i class="fa-solid fa-check-double mr-1"></i> Sudah dibaca & sudah dibalas</span>` 
+                    : `<span class="px-2.5 py-1 bg-amber-50 text-amber-700 rounded-md text-[10px] font-semibold border border-emerald-200"><i class="fa-solid fa-clock mr-1"></i> Pending / Menunggu Respon</span>`;
 
                 const replyBox = c.reply 
                     ? `<div class="mt-2 p-3 bg-blue-50/60 rounded-xl border border-blue-100 text-xs text-slate-700">
